@@ -76,6 +76,17 @@ class FileAttachment(Base):
     message = relationship("Message", back_populates="attachments")
 
 
+class TokenUsage(Base):
+    __tablename__ = "token_usage"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ai_name = Column(String(50), nullable=False)       # "claude", "chatgpt", "grok"
+    input_tokens = Column(Integer, default=0)
+    output_tokens = Column(Integer, default=0)
+    estimated_cost_usd = Column(String(20), default="0.0000")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 def get_db():
     db = SessionLocal()
     try:
