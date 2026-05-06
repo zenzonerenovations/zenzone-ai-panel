@@ -18,6 +18,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <style>
 /* ── Reset & base ─────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -156,7 +157,20 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1a1a2e; 
 .answer-header-logo { width: 22px; height: 22px; color: var(--white); opacity: 0.9; }
 .answer-header-text { color: var(--white); font-size: 13px; font-weight: 600; }
 .answer-header-sub { color: rgba(255,255,255,0.5); font-size: 11px; margin-left: auto; }
-.answer-body { padding: 18px 20px; font-size: 15px; line-height: 1.7; color: #1a1a2e; white-space: pre-wrap; }
+.answer-body { padding: 18px 20px; font-size: 15px; line-height: 1.7; color: #1a1a2e; }
+.answer-body h1,.answer-body h2,.answer-body h3 { font-weight: 700; margin: 1.2em 0 .5em; color: var(--dark); }
+.answer-body h2 { font-size: 17px; border-bottom: 1px solid #E8ECF3; padding-bottom: 4px; }
+.answer-body h3 { font-size: 15px; }
+.answer-body p { margin: 0 0 .9em; }
+.answer-body ul,.answer-body ol { padding-left: 1.5em; margin: 0 0 .9em; }
+.answer-body li { margin-bottom: .3em; }
+.answer-body strong { font-weight: 700; color: var(--dark); }
+.answer-body table { border-collapse: collapse; width: 100%; margin: .8em 0; font-size: 14px; }
+.answer-body th { background: #F0F4FB; padding: 8px 10px; text-align: left; font-weight: 600; border: 1px solid #E0E4EB; }
+.answer-body td { padding: 7px 10px; border: 1px solid #E0E4EB; }
+.answer-body code { background: #F0F4FB; padding: 2px 5px; border-radius: 4px; font-size: 13px; }
+.answer-body hr { border: none; border-top: 1px solid #E8ECF3; margin: 1em 0; }
+.ai-unavailable { display: inline-flex; align-items: center; gap: 6px; background: #FFF3CD; border: 1px solid #FFE08A; border-radius: 20px; padding: 3px 10px; font-size: 12px; color: #856404; margin-bottom: 8px; }
 
 /* ── Debate summary ──────────────────────────────────────────────── */
 .debate-summary {
@@ -682,7 +696,7 @@ function makeAICard(synthesis, summary, aiResponses = []) {
         <div class="answer-header-text">ZenZone AI Panel — Synthesized Answer</div>
         <div class="answer-header-sub">${esc(changedLabel)}</div>
       </div>
-      <div class="answer-body">${esc(synthesis)}</div>
+      <div class="answer-body">${renderMd(synthesis)}${unavailableWarning(aiResponses)}</div>
     </div>
     ${summary ? makeSummarySection(summary) : ''}
     ${aiResponses && aiResponses.length ? makeAIDetailSection(aiResponses) : ''}
@@ -907,6 +921,23 @@ function esc(s) {
   return String(s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;');
+}
+
+function renderMd(s) {
+  if (!s) return '';
+  try {
+    return typeof marked !== 'undefined' ? marked.parse(s) : esc(s);
+  } catch(e) { return esc(s); }
+}
+
+function unavailableWarning(aiResponses) {
+  if (!aiResponses || !aiResponses.length) return '';
+  const unavailable = aiResponses.filter(r =>
+    r.round1 && (r.round1.includes('unavailable') || r.round1.includes('Error') || r.round1.includes('quota'))
+  );
+  if (!unavailable.length) return '';
+  const names = unavailable.map(r => aiLabel(r.ai_name)).join(', ');
+  return `<div class="ai-unavailable">⚠ ${names} was unavailable for this debate — result based on ${3 - unavailable.length} AI${3-unavailable.length!==1?'s':''}</div>`;
 }
 
 function aiLabel(name) {
