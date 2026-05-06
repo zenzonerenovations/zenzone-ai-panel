@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ZenZone AI Panel</title>
+
+<!-- Icons & PWA -->
+<link rel="icon" type="image/x-icon"  href="/static/favicon.ico"/>
+<link rel="icon" type="image/png" sizes="32x32"  href="/static/icon-32.png"/>
+<link rel="icon" type="image/png" sizes="128x128" href="/static/icon-128.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png"/>
+<link rel="manifest" href="/static/manifest.json"/>
+<meta name="theme-color" content="#111318"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="ZenZone AI"/>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ── Reset & base ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:       #2B7EC1;
+  --blue-light: #4A9FE0;
+  --blue-dark:  #1A5A90;
+  --dark:       #111318;
+  --dark2:      #1C2028;
+  --dark3:      #252B36;
+  --border:     #2E3545;
+  --text:       #E8EBF0;
+  --text-muted: #8A92A0;
+  --bg:         #F4F6F9;
+  --white:      #FFFFFF;
+  --radius:     12px;
+  --radius-sm:  8px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.08);
+  --sidebar-w:  280px;
+}
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1a1a2e; height: 100dvh; overflow: hidden; display: flex; }
+
+/* ── Sidebar ─────────────────────────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: var(--dark); color: var(--text);
+  display: flex; flex-direction: column;
+  height: 100dvh; overflow: hidden;
+  transition: transform .25s ease;
+  z-index: 100;
+}
+#sidebar-header {
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+#sidebar-logo { width: 36px; height: 36px; color: var(--white); flex-shrink: 0; }
+#sidebar-brand { font-size: 14px; font-weight: 600; line-height: 1.3; }
+#sidebar-brand span { display: block; color: var(--text-muted); font-size: 11px; font-weight: 400; }
+#new-chat-btn {
+  margin: 12px; padding: 10px 14px;
+  background: var(--blue); color: #fff;
+  border: none; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+  transition: background .15s;
+}
+#new-chat-btn:hover { background: var(--blue-light); }
+#nav-tabs {
+  display: flex; margin: 0 12px 8px;
+  background: var(--dark2); border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.nav-tab {
+  flex: 1; padding: 8px; font-size: 12px; font-weight: 500;
+  text-align: center; cursor: pointer; color: var(--text-muted);
+  transition: all .15s; border: none; background: none;
+}
+.nav-tab.active { background: var(--dark3); color: var(--text); }
+#conv-list { flex: 1; overflow-y: auto; padding: 4px 8px; }
+#conv-list::-webkit-scrollbar { width: 4px; }
+#conv-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.conv-item {
+  padding: 10px 10px; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 13px; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 2px; transition: all .15s; gap: 6px;
+}
+.conv-item:hover { background: var(--dark3); color: var(--text); }
+.conv-item.active { background: var(--dark3); color: var(--text); }
+.conv-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conv-delete { opacity: 0; font-size: 16px; cursor: pointer; transition: opacity .15s; flex-shrink: 0; color: var(--text-muted); background: none; border: none; }
+.conv-item:hover .conv-delete { opacity: 1; }
+#sidebar-footer { padding: 12px; border-top: 1px solid var(--border); }
+.sidebar-link { display: block; font-size: 12px; color: var(--text-muted); text-decoration: none; padding: 6px 8px; border-radius: 6px; transition: all .15s; cursor: pointer; }
+.sidebar-link:hover { background: var(--dark3); color: var(--text); }
+
+/* ── Trends panel in sidebar ─────────────────────────────────────── */
+#trends-panel { flex: 1; overflow-y: auto; padding: 12px; display: none; }
+#trends-panel.visible { display: block; }
+.trend-card { background: var(--dark2); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; }
+.trend-card h4 { font-size: 12px; font-weight: 600; color: var(--blue-light); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .05em; }
+.trend-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.trend-row span:last-child { color: var(--text); font-weight: 500; }
+.trend-bar { height: 4px; background: var(--border); border-radius: 4px; margin-top: 6px; overflow: hidden; }
+.trend-fill { height: 100%; background: var(--blue); border-radius: 4px; transition: width .5s; }
+.trend-stat { text-align: center; padding: 8px; background: var(--dark3); border-radius: 6px; margin-bottom: 8px; }
+.trend-stat .num { font-size: 22px; font-weight: 700; color: var(--blue-light); }
+.trend-stat .lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.trends-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+
+/* ── Main area ───────────────────────────────────────────────────── */
+#main { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100dvh; }
+
+/* ── Top bar ─────────────────────────────────────────────────────── */
+#topbar {
+  background: var(--white); border-bottom: 1px solid #E0E4EB;
+  padding: 12px 20px; display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+#menu-btn { display: none; background: none; border: none; cursor: pointer; font-size: 22px; color: #555; }
+#topbar-logo { width: 32px; height: 32px; color: var(--dark); flex-shrink: 0; }
+#topbar-title { font-size: 16px; font-weight: 600; color: var(--dark); }
+#topbar-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+#api-status { margin-left: auto; display: flex; gap: 6px; }
+.api-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; display: inline-block; }
+.api-dot.ok { background: #4CAF50; }
+.api-dot.err { background: #F44336; }
+.api-dot[title] { cursor: help; }
+
+/* ── Chat area ───────────────────────────────────────────────────── */
+#chat-area { flex: 1; overflow-y: auto; padding: 24px 0; }
+#chat-area::-webkit-scrollbar { width: 6px; }
+#chat-area::-webkit-scrollbar-thumb { background: #D0D5DE; border-radius: 4px; }
+#messages { max-width: 760px; margin: 0 auto; padding: 0 20px; display: flex; flex-direction: column; gap: 24px; }
+
+/* ── Message bubbles ─────────────────────────────────────────────── */
+.msg-user { display: flex; justify-content: flex-end; }
+.msg-user .bubble {
+  background: var(--dark); color: #E8EBF0;
+  padding: 12px 16px; border-radius: 18px 18px 4px 18px;
+  max-width: 75%; font-size: 15px; line-height: 1.5;
+}
+.msg-ai { display: flex; flex-direction: column; gap: 0; }
+
+/* ── AI answer card ──────────────────────────────────────────────── */
+.answer-card {
+  background: var(--white); border: 1px solid #E0E4EB;
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.answer-header {
+  background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
+  padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+}
+.answer-header-logo { width: 22px; height: 22px; color: var(--white); opacity: 0.9; }
+.answer-header-text { color: var(--white); font-size: 13px; font-weight: 600; }
+.answer-header-sub { color: rgba(255,255,255,0.5); font-size: 11px; margin-left: auto; }
+.answer-body { padding: 18px 20px; font-size: 15px; line-height: 1.7; color: #1a1a2e; white-space: pre-wrap; }
+
+/* ── Debate summary ──────────────────────────────────────────────── */
+.debate-summary {
+  border: 1px solid #E8ECF3; border-radius: var(--radius-sm);
+  overflow: hidden; margin-top: 10px;
+}
+.debate-summary-header {
+  background: #F0F4FB; padding: 10px 16px;
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none;
+}
+.debate-summary-header .icon { font-size: 16px; }
+.debate-summary-header .label { font-size: 13px; font-weight: 600; color: var(--blue-dark); flex: 1; }
+.debate-summary-header .chevron { color: var(--text-muted); font-size: 14px; transition: transform .2s; }
+.debate-summary-header.open .chevron { transform: rotate(180deg); }
+.debate-summary-body { padding: 14px 16px; font-size: 13.5px; line-height: 1.65; color: #3a3a5c; display: none; background: #F8FAFF; }
+.debate-summary-body.open { display: block; }
+
+/* ── Individual AI toggle ────────────────────────────────────────── */
+.ai-detail-toggle {
+  margin-top: 6px; border: 1px solid #E8ECF3; border-radius: var(--radius-sm); overflow: hidden;
+}
+.ai-detail-header {
+  background: #F7F8FA; padding: 9px 16px;
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none;
+}
+.ai-detail-header .label { font-size: 12px; font-weight: 600; color: #555; flex: 1; }
+.ai-detail-header .chevron { color: #aaa; font-size: 14px; transition: transform .2s; }
+.ai-detail-header.open .chevron { transform: rotate(180deg); }
+.ai-detail-body { display: none; }
+.ai-detail-body.open { display: block; }
+.ai-panel { border-top: 1px solid #EEF0F4; padding: 14px 16px; }
+.ai-panel-name {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; margin-bottom: 8px; padding: 3px 8px;
+  border-radius: 20px;
+}
+.ai-panel-name.claude  { background: #FFF0E6; color: #C45000; }
+.ai-panel-name.chatgpt { background: #E6F7EF; color: #0A7A45; }
+.ai-panel-name.grok    { background: #EDE6FF; color: #6B2FD9; }
+.changed-badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; background: #FFF3CD; color: #856404; font-weight: 600; }
+.round-label { font-size: 11px; font-weight: 600; color: #888; margin: 8px 0 4px; text-transform: uppercase; letter-spacing: .04em; }
+.round-text { font-size: 13px; line-height: 1.6; color: #333; white-space: pre-wrap; }
+
+/* ── Attachment badge ────────────────────────────────────────────── */
+.attach-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #EEF2FF; border: 1px solid #C7D2FE;
+  border-radius: 20px; padding: 4px 10px; font-size: 12px;
+  color: #4338CA; margin-bottom: 8px;
+}
+
+/* ── Thinking indicator ──────────────────────────────────────────── */
+.thinking-card {
+  background: var(--white); border: 1px solid #E0E4EB;
+  border-radius: var(--radius); padding: 20px; display: flex;
+  flex-direction: column; gap: 14px;
+}
+.thinking-status { font-size: 14px; color: #555; display: flex; align-items: center; gap: 10px; }
+.thinking-status .spinner {
+  width: 18px; height: 18px; border: 2px solid #E0E4EB;
+  border-top-color: var(--blue); border-radius: 50%;
+  animation: spin .7s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.ai-thinking-row { display: flex; gap: 10px; }
+.ai-chip {
+  flex: 1; background: #F7F8FA; border: 1px solid #E0E4EB;
+  border-radius: var(--radius-sm); padding: 10px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 500; color: #666;
+}
+.ai-chip .dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 1.2s ease-in-out infinite; }
+.ai-chip.claude  .dot { background: #C45000; animation-delay: 0s; }
+.ai-chip.chatgpt .dot { background: #0A7A45; animation-delay: .2s; }
+.ai-chip.grok    .dot { background: #6B2FD9; animation-delay: .4s; }
+@keyframes pulse { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
+
+/* ── Input bar ───────────────────────────────────────────────────── */
+#input-wrap {
+  background: var(--white); border-top: 1px solid #E0E4EB;
+  padding: 12px 20px 14px; flex-shrink: 0;
+}
+#input-inner { max-width: 760px; margin: 0 auto; }
+#file-preview {
+  display: none; align-items: center; gap: 8px;
+  background: #F0F4FB; border-radius: 8px; padding: 8px 12px;
+  font-size: 13px; color: #444; margin-bottom: 8px;
+}
+#file-preview.visible { display: flex; }
+#file-preview .remove-file { cursor: pointer; font-size: 18px; color: #888; background: none; border: none; margin-left: auto; }
+#input-row { display: flex; gap: 8px; align-items: flex-end; }
+#upload-btn {
+  width: 42px; height: 42px; flex-shrink: 0;
+  background: #F0F4FB; border: 1px solid #D8DDE8; border-radius: 10px;
+  cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;
+  transition: all .15s; color: #555;
+}
+#upload-btn:hover { background: #E4EBF8; border-color: var(--blue); }
+#file-input { display: none; }
+#msg-input {
+  flex: 1; min-height: 42px; max-height: 160px; padding: 10px 14px;
+  border: 1px solid #D8DDE8; border-radius: 10px; font-size: 15px;
+  font-family: inherit; resize: none; outline: none; line-height: 1.4;
+  transition: border-color .15s; background: #FAFBFD;
+}
+#msg-input:focus { border-color: var(--blue); background: #fff; }
+#send-btn {
+  width: 42px; height: 42px; flex-shrink: 0;
+  background: var(--blue); border: none; border-radius: 10px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .15s; color: white; font-size: 18px;
+}
+#send-btn:hover { background: var(--blue-dark); }
+#send-btn:disabled { background: #B0C4D8; cursor: not-allowed; }
+#input-hint { font-size: 11px; color: #AAB0BC; margin-top: 6px; text-align: center; }
+
+/* ── Welcome screen ──────────────────────────────────────────────── */
+#welcome {
+  max-width: 600px; margin: 60px auto; padding: 0 20px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+#welcome-logo { width: 72px; height: 72px; color: var(--dark); margin-bottom: 16px; }
+#welcome h1 { font-size: 28px; font-weight: 700; color: var(--dark); margin-bottom: 8px; }
+#welcome p { font-size: 15px; color: #666; line-height: 1.6; margin-bottom: 32px; }
+.feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+.feature-card {
+  background: var(--white); border: 1px solid #E0E4EB;
+  border-radius: var(--radius); padding: 16px; text-align: left;
+}
+.feature-card .icon { font-size: 24px; margin-bottom: 8px; }
+.feature-card h3 { font-size: 13px; font-weight: 600; color: var(--dark); margin-bottom: 4px; }
+.feature-card p { font-size: 12px; color: #888; line-height: 1.5; }
+
+/* ── Toast ───────────────────────────────────────────────────────── */
+#toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: var(--dark); color: white; padding: 10px 20px;
+  border-radius: 20px; font-size: 13px; opacity: 0; pointer-events: none;
+  transition: opacity .25s; z-index: 999;
+}
+#toast.show { opacity: 1; }
+
+/* ── Overlay for mobile sidebar ──────────────────────────────────── */
+#overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 99; }
+#overlay.visible { display: block; }
+
+/* ── Mobile ──────────────────────────────────────────────────────── */
+@media (max-width: 680px) {
+  #sidebar { position: fixed; top: 0; left: 0; height: 100dvh; transform: translateX(-100%); }
+  #sidebar.open { transform: translateX(0); }
+  #menu-btn { display: block; }
+  #topbar-logo { display: none; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .msg-user .bubble { max-width: 90%; }
+}
+</style>
+</head>
+<body>
+
+<!-- Overlay (mobile) -->
+<div id="overlay"></div>
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────── -->
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <svg id="sidebar-logo" viewBox="0 0 200 190" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="54" y="18" width="20" height="42" rx="1"/>
+      <line x1="14" y1="88" x2="100" y2="18"/><line x1="100" y1="18" x2="186" y2="88"/>
+      <line x1="14" y1="88" x2="14" y2="182"/><line x1="186" y1="88" x2="186" y2="182"/>
+      <line x1="14" y1="182" x2="186" y2="182"/>
+      <path d="M100,162 C92,145 88,118 100,95 C112,118 108,145 100,162Z"/>
+      <path d="M100,162 C88,150 72,130 78,105 C90,112 100,135 100,162Z"/>
+      <path d="M100,162 C112,150 128,130 122,105 C110,112 100,135 100,162Z"/>
+      <path d="M100,162 C82,162 58,152 50,132 C68,126 88,142 100,162Z"/>
+      <path d="M100,162 C118,162 142,152 150,132 C132,126 112,142 100,162Z"/>
+    </svg>
+    <div id="sidebar-brand">ZenZone AI Panel<span>Claude · ChatGPT · Grok</span></div>
+  </div>
+
+  <button id="new-chat-btn">
+    <span>＋</span> New Conversation
+  </button>
+
+  <div id="nav-tabs">
+    <button class="nav-tab active" data-tab="chats">Chats</button>
+    <button class="nav-tab" data-tab="trends">Trends</button>
+  </div>
+
+  <div id="conv-list"></div>
+  <div id="trends-panel"></div>
+
+  <div id="sidebar-footer">
+    <div class="sidebar-link" onclick="showToast('Add your API keys to the .env file to enable all AIs.')">⚙ API Keys</div>
+    <div class="sidebar-link" onclick="window.open('https://render.com','_blank')">🚀 Hosted on Render</div>
+  </div>
+</nav>
+
+<!-- ── Main ─────────────────────────────────────────────────────────── -->
+<div id="main">
+
+  <!-- Top bar -->
+  <header id="topbar">
+    <button id="menu-btn" onclick="toggleSidebar()">☰</button>
+    <svg id="topbar-logo" viewBox="0 0 200 190" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="54" y="18" width="20" height="42" rx="1"/>
+      <line x1="14" y1="88" x2="100" y2="18"/><line x1="100" y1="18" x2="186" y2="88"/>
+      <line x1="14" y1="88" x2="14" y2="182"/><line x1="186" y1="88" x2="186" y2="182"/>
+      <line x1="14" y1="182" x2="186" y2="182"/>
+      <path d="M100,162 C92,145 88,118 100,95 C112,118 108,145 100,162Z"/>
+      <path d="M100,162 C88,150 72,130 78,105 C90,112 100,135 100,162Z"/>
+      <path d="M100,162 C112,150 128,130 122,105 C110,112 100,135 100,162Z"/>
+      <path d="M100,162 C82,162 58,152 50,132 C68,126 88,142 100,162Z"/>
+      <path d="M100,162 C118,162 142,152 150,132 C132,126 112,142 100,162Z"/>
+    </svg>
+    <div>
+      <div id="topbar-title">ZenZone AI Panel</div>
+      <div id="topbar-subtitle">Three AIs debate — one best answer</div>
+    </div>
+    <div id="api-status" title="API connection status">
+      <span class="api-dot" id="dot-claude" title="Claude"></span>
+      <span class="api-dot" id="dot-chatgpt" title="ChatGPT"></span>
+      <span class="api-dot" id="dot-grok" title="Grok"></span>
+    </div>
+  </header>
+
+  <!-- Chat area -->
+  <div id="chat-area">
+    <div id="messages">
+      <!-- Welcome screen -->
+      <div id="welcome">
+        <svg id="welcome-logo" viewBox="0 0 200 190" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="54" y="18" width="20" height="42" rx="1"/>
+          <line x1="14" y1="88" x2="100" y2="18"/><line x1="100" y1="18" x2="186" y2="88"/>
+          <line x1="14" y1="88" x2="14" y2="182"/><line x1="186" y1="88" x2="186" y2="182"/>
+          <line x1="14" y1="182" x2="186" y2="182"/>
+          <path d="M100,162 C92,145 88,118 100,95 C112,118 108,145 100,162Z"/>
+          <path d="M100,162 C88,150 72,130 78,105 C90,112 100,135 100,162Z"/>
+          <path d="M100,162 C112,150 128,130 122,105 C110,112 100,135 100,162Z"/>
+          <path d="M100,162 C82,162 58,152 50,132 C68,126 88,142 100,162Z"/>
+          <path d="M100,162 C118,162 142,152 150,132 C132,126 112,142 100,162Z"/>
+        </svg>
+        <h1>ZenZone AI Panel</h1>
+        <p>Ask any question. Claude, ChatGPT, and Grok each answer independently, then debate each other — and you get one refined, best-possible answer.</p>
+        <div class="feature-grid">
+          <div class="feature-card"><div class="icon">🤝</div><h3>3-Way Debate</h3><p>Three AIs argue it out so you don't have to go back and forth between apps.</p></div>
+          <div class="feature-card"><div class="icon">📎</div><h3>Files & Images</h3><p>Upload PDFs, photos, docs — all three AIs analyze them together.</p></div>
+          <div class="feature-card"><div class="icon">💬</div><h3>Full History</h3><p>All conversations saved. Pick up where you left off, any time.</p></div>
+          <div class="feature-card"><div class="icon">📊</div><h3>Trend Tracking</h3><p>See which AI changes its mind most and how they evolve over time.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input bar -->
+  <div id="input-wrap">
+    <div id="input-inner">
+      <div id="file-preview">
+        <span id="file-preview-icon">📎</span>
+        <span id="file-preview-name"></span>
+        <button class="remove-file" onclick="clearFile()">✕</button>
+      </div>
+      <div id="input-row">
+        <button id="upload-btn" onclick="document.getElementById('file-input').click()" title="Attach file or image">📎</button>
+        <input type="file" id="file-input" accept="image/*,.pdf,.docx,.txt,.csv,.md,.json"/>
+        <textarea id="msg-input" placeholder="Ask anything — all three AIs will weigh in…" rows="1"></textarea>
+        <button id="send-btn" onclick="sendMessage()">➤</button>
+      </div>
+      <div id="input-hint">Claude · ChatGPT · Grok — 2 rounds of debate → 1 best answer</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let currentConvId = null;
+let pendingFile = null;    // { name, text, is_image, image_base64 }
+let isStreaming = false;
+
+// ── Init ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadConversations();
+  setupInput();
+  setupTabs();
+  setupFileInput();
+  setupOverlay();
+});
+
+// ── Sidebar toggle (mobile) ────────────────────────────────────────────────
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('visible');
+}
+function setupOverlay() {
+  document.getElementById('overlay').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('visible');
+  });
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function setupTabs() {
+  document.querySelectorAll('.nav-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.getElementById('conv-list').style.display   = tab === 'chats'  ? '' : 'none';
+      const tp = document.getElementById('trends-panel');
+      if (tab === 'trends') { tp.classList.add('visible'); loadTrends(); }
+      else { tp.classList.remove('visible'); }
+    });
+  });
+}
+
+// ── Conversations ──────────────────────────────────────────────────────────
+async function loadConversations() {
+  try {
+    const res = await fetch('/api/conversations');
+    const convs = await res.json();
+    const list = document.getElementById('conv-list');
+    list.innerHTML = '';
+    convs.forEach(c => list.appendChild(makeConvItem(c)));
+  } catch(e) { console.error('loadConversations', e); }
+}
+
+function makeConvItem(c) {
+  const el = document.createElement('div');
+  el.className = 'conv-item' + (c.id === currentConvId ? ' active' : '');
+  el.dataset.id = c.id;
+  el.innerHTML = `
+    <span class="conv-title">${esc(c.title)}</span>
+    <button class="conv-delete" title="Delete" onclick="deleteConv(event, ${c.id})">🗑</button>
+  `;
+  el.addEventListener('click', () => openConversation(c.id));
+  return el;
+}
+
+async function openConversation(id) {
+  currentConvId = id;
+  document.querySelectorAll('.conv-item').forEach(el => el.classList.toggle('active', +el.dataset.id === id));
+  document.getElementById('messages').innerHTML = '';
+  // Close sidebar on mobile
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('visible');
+
+  try {
+    const res = await fetch(`/api/conversations/${id}`);
+    const data = await res.json();
+    const msgEl = document.getElementById('messages');
+    data.messages.forEach(m => {
+      if (m.role === 'user') {
+        msgEl.appendChild(makeUserBubble(m.content, m.attachments));
+      } else {
+        msgEl.appendChild(makeAICard(m.content, m.debate_summary, m.ai_responses));
+      }
+    });
+    scrollToBottom();
+  } catch(e) { console.error('openConversation', e); }
+}
+
+async function newConversation() {
+  try {
+    const res = await fetch('/api/conversations', { method: 'POST' });
+    const c = await res.json();
+    currentConvId = c.id;
+    document.getElementById('messages').innerHTML = '';
+    showWelcome();
+    await loadConversations();
+  } catch(e) { console.error('newConversation', e); }
+}
+
+async function deleteConv(e, id) {
+  e.stopPropagation();
+  if (!confirm('Delete this conversation?')) return;
+  await fetch(`/api/conversations/${id}`, { method: 'DELETE' });
+  if (currentConvId === id) { currentConvId = null; document.getElementById('messages').innerHTML = ''; showWelcome(); }
+  loadConversations();
+}
+
+document.getElementById('new-chat-btn').addEventListener('click', newConversation);
+
+// ── Send message ───────────────────────────────────────────────────────────
+async function sendMessage() {
+  if (isStreaming) return;
+  const input = document.getElementById('msg-input');
+  const question = input.value.trim();
+  if (!question) return;
+
+  // Create conversation if none active
+  if (!currentConvId) {
+    const res = await fetch('/api/conversations', { method: 'POST' });
+    const c = await res.json();
+    currentConvId = c.id;
+    document.getElementById('messages').innerHTML = '';
+  }
+
+  // Clear welcome
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+
+  input.value = '';
+  input.style.height = '';
+  isStreaming = true;
+  document.getElementById('send-btn').disabled = true;
+
+  // Show user bubble
+  const msgEl = document.getElementById('messages');
+  msgEl.appendChild(makeUserBubble(question, pendingFile ? [{ filename: pendingFile.name }] : []));
+
+  // Show thinking card
+  const thinkingEl = makeThinkingCard();
+  msgEl.appendChild(thinkingEl);
+  scrollToBottom();
+
+  // Build request
+  const body = {
+    question,
+    file_text: pendingFile?.text || null,
+    file_name: pendingFile?.name || null,
+    is_image:  pendingFile?.is_image || false,
+  };
+  const fileToClear = pendingFile;
+  clearFile();
+
+  try {
+    const res = await fetch(`/api/conversations/${currentConvId}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+      for (const part of parts) {
+        processSSEChunk(part, thinkingEl);
+      }
+    }
+  } catch(e) {
+    thinkingEl.remove();
+    msgEl.appendChild(makeErrorCard('Connection error: ' + e.message));
+    scrollToBottom();
+  }
+
+  isStreaming = false;
+  document.getElementById('send-btn').disabled = false;
+  loadConversations();
+}
+
+function processSSEChunk(chunk, thinkingEl) {
+  const lines = chunk.split('\n');
+  let event = '', data = '';
+  for (const line of lines) {
+    if (line.startsWith('event: ')) event = line.slice(7).trim();
+    if (line.startsWith('data: ')) { try { data = JSON.parse(line.slice(6)); } catch{} }
+  }
+  if (event === 'status') {
+    const statusEl = thinkingEl.querySelector('.thinking-status span:last-child');
+    if (statusEl) statusEl.textContent = data.message;
+  } else if (event === 'result') {
+    thinkingEl.remove();
+    const card = makeAICard(data.synthesis, data.summary, buildAIResponsesFromResult(data));
+    document.getElementById('messages').appendChild(card);
+    scrollToBottom();
+  } else if (event === 'error') {
+    thinkingEl.remove();
+    document.getElementById('messages').appendChild(makeErrorCard(data.message));
+    scrollToBottom();
+  }
+}
+
+function buildAIResponsesFromResult(result) {
+  return ['claude', 'chatgpt', 'grok'].map(name => ({
+    ai_name: name,
+    round1: result.round1[name],
+    round2: result.round2[name],
+    changed_position: result.changes[name],
+  }));
+}
+
+// ── DOM builders ───────────────────────────────────────────────────────────
+function makeUserBubble(content, attachments = []) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-user';
+  const attachHTML = attachments.map(a => `<div class="attach-badge">📎 ${esc(a.filename)}</div>`).join('');
+  wrap.innerHTML = `<div class="bubble">${attachHTML}${esc(content)}</div>`;
+  return wrap;
+}
+
+function makeAICard(synthesis, summary, aiResponses = []) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-ai';
+
+  const changedCount = (aiResponses || []).filter(r => r.changed_position).length;
+  const changedLabel = changedCount > 0 ? `${changedCount} AI${changedCount>1?'s':''} revised` : 'Consensus reached';
+
+  wrap.innerHTML = `
+    <div class="answer-card">
+      <div class="answer-header">
+        <svg class="answer-header-logo" viewBox="0 0 200 190" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="54" y="18" width="20" height="42" rx="1"/>
+          <line x1="14" y1="88" x2="100" y2="18"/><line x1="100" y1="18" x2="186" y2="88"/>
+          <line x1="14" y1="88" x2="14" y2="182"/><line x1="186" y1="88" x2="186" y2="182"/>
+          <line x1="14" y1="182" x2="186" y2="182"/>
+          <path d="M100,162 C92,145 88,118 100,95 C112,118 108,145 100,162Z"/>
+          <path d="M100,162 C88,150 72,130 78,105 C90,112 100,135 100,162Z"/>
+          <path d="M100,162 C112,150 128,130 122,105 C110,112 100,135 100,162Z"/>
+          <path d="M100,162 C82,162 58,152 50,132 C68,126 88,142 100,162Z"/>
+          <path d="M100,162 C118,162 142,152 150,132 C132,126 112,142 100,162Z"/>
+        </svg>
+        <div class="answer-header-text">ZenZone AI Panel — Synthesized Answer</div>
+        <div class="answer-header-sub">${esc(changedLabel)}</div>
+      </div>
+      <div class="answer-body">${esc(synthesis)}</div>
+    </div>
+    ${summary ? makeSummarySection(summary) : ''}
+    ${aiResponses && aiResponses.length ? makeAIDetailSection(aiResponses) : ''}
+  `;
+  return wrap;
+}
+
+function makeSummarySection(summary) {
+  return `
+    <div class="debate-summary">
+      <div class="debate-summary-header" onclick="toggleSection(this)">
+        <span class="icon">🔍</span>
+        <span class="label">Debate Insights — What Each AI Said & Changed</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="debate-summary-body">${esc(summary)}</div>
+    </div>
+  `;
+}
+
+function makeAIDetailSection(responses) {
+  const panels = responses.map(r => {
+    const badge = r.changed_position ? '<span class="changed-badge">↺ Revised</span>' : '';
+    return `
+      <div class="ai-panel">
+        <div class="ai-panel-name ${r.ai_name}">${aiLabel(r.ai_name)} ${badge}</div>
+        <div class="round-label">Round 1 — Independent answer</div>
+        <div class="round-text">${esc(r.round1 || '—')}</div>
+        <div class="round-label">Round 2 — After seeing others</div>
+        <div class="round-text">${esc(r.round2 || '—')}</div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="ai-detail-toggle">
+      <div class="ai-detail-header" onclick="toggleSection(this)">
+        <span class="label">Show Individual AI Responses (both rounds)</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="ai-detail-body">${panels}</div>
+    </div>
+  `;
+}
+
+function makeThinkingCard() {
+  const el = document.createElement('div');
+  el.className = 'msg-ai';
+  el.innerHTML = `
+    <div class="thinking-card">
+      <div class="thinking-status">
+        <div class="spinner"></div>
+        <span>Starting debate…</span>
+      </div>
+      <div class="ai-thinking-row">
+        <div class="ai-chip claude"><div class="dot"></div>Claude</div>
+        <div class="ai-chip chatgpt"><div class="dot"></div>ChatGPT</div>
+        <div class="ai-chip grok"><div class="dot"></div>Grok</div>
+      </div>
+    </div>
+  `;
+  return el;
+}
+
+function makeErrorCard(msg) {
+  const el = document.createElement('div');
+  el.className = 'msg-ai';
+  el.innerHTML = `<div class="answer-card" style="border-color:#F44336"><div class="answer-body" style="color:#D32F2F">⚠ Error: ${esc(msg)}</div></div>`;
+  return el;
+}
+
+function toggleSection(header) {
+  header.classList.toggle('open');
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+// ── File handling ──────────────────────────────────────────────────────────
+function setupFileInput() {
+  const input = document.getElementById('file-input');
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    if (!file) return;
+    document.getElementById('file-preview-name').textContent = file.name;
+    document.getElementById('file-preview-icon').textContent = file.type.startsWith('image/') ? '🖼' : '📎';
+    document.getElementById('file-preview').classList.add('visible');
+
+    // Upload to server
+    showToast('Processing file…');
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      pendingFile = {
+        name: data.filename,
+        text: data.text_content,
+        is_image: data.is_image,
+        image_base64: data.image_base64,
+      };
+      showToast('File ready ✓');
+    } catch(e) {
+      showToast('File upload failed');
+      clearFile();
+    }
+    input.value = '';
+  });
+}
+
+function clearFile() {
+  pendingFile = null;
+  document.getElementById('file-preview').classList.remove('visible');
+  document.getElementById('file-input').value = '';
+}
+
+// ── Trends ─────────────────────────────────────────────────────────────────
+async function loadTrends() {
+  const panel = document.getElementById('trends-panel');
+  panel.innerHTML = '<div style="color:#8A92A0;font-size:13px;padding:8px">Loading trends…</div>';
+  try {
+    const res = await fetch('/api/trends');
+    const data = await res.json();
+    renderTrends(data, panel);
+  } catch(e) {
+    panel.innerHTML = '<div style="color:#8A92A0;font-size:13px;padding:8px">Could not load trends.</div>';
+  }
+}
+
+function renderTrends(data, panel) {
+  const stats = data.ai_stats;
+  const aiNames = ['claude', 'chatgpt', 'grok'];
+
+  let html = `
+    <div class="trends-grid">
+      <div class="trend-stat"><div class="num">${data.total_conversations}</div><div class="lbl">Conversations</div></div>
+      <div class="trend-stat"><div class="num">${data.total_questions}</div><div class="lbl">Questions Asked</div></div>
+    </div>
+  `;
+
+  aiNames.forEach(name => {
+    const s = stats[name];
+    if (!s) return;
+    html += `
+      <div class="trend-card">
+        <h4>${aiLabel(name)}</h4>
+        <div class="trend-row"><span>Total responses</span><span>${s.total}</span></div>
+        <div class="trend-row"><span>Revised position</span><span>${s.changed} (${s.change_rate}%)</span></div>
+        <div class="trend-row"><span>Held position</span><span>${s.stable}</span></div>
+        <div class="trend-bar"><div class="trend-fill" style="width:${s.change_rate}%"></div></div>
+      </div>
+    `;
+  });
+
+  if (data.timeline && data.timeline.length) {
+    html += `<div class="trend-card"><h4>Recent Changes</h4>`;
+    data.timeline.slice(0, 8).forEach(t => {
+      if (!t.changed) return;
+      html += `<div class="trend-row" style="margin-bottom:6px"><span>${aiLabel(t.ai)} revised</span></div>
+               <div style="font-size:11px;color:#666;margin-bottom:8px">${esc(t.preview)}</div>`;
+    });
+    html += `</div>`;
+  }
+
+  panel.innerHTML = html;
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function setupInput() {
+  const input = document.getElementById('msg-input');
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+  });
+}
+
+function scrollToBottom() {
+  const area = document.getElementById('chat-area');
+  area.scrollTop = area.scrollHeight;
+}
+
+function showWelcome() {
+  const msgs = document.getElementById('messages');
+  if (!document.getElementById('welcome')) {
+    msgs.innerHTML = `
+      <div id="welcome">
+        <svg id="welcome-logo" viewBox="0 0 200 190" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="54" y="18" width="20" height="42" rx="1"/>
+          <line x1="14" y1="88" x2="100" y2="18"/><line x1="100" y1="18" x2="186" y2="88"/>
+          <line x1="14" y1="88" x2="14" y2="182"/><line x1="186" y1="88" x2="186" y2="182"/>
+          <line x1="14" y1="182" x2="186" y2="182"/>
+          <path d="M100,162 C92,145 88,118 100,95 C112,118 108,145 100,162Z"/>
+          <path d="M100,162 C88,150 72,130 78,105 C90,112 100,135 100,162Z"/>
+          <path d="M100,162 C112,150 128,130 122,105 C110,112 100,135 100,162Z"/>
+          <path d="M100,162 C82,162 58,152 50,132 C68,126 88,142 100,162Z"/>
+          <path d="M100,162 C118,162 142,152 150,132 C132,126 112,142 100,162Z"/>
+        </svg>
+        <h1>ZenZone AI Panel</h1>
+        <p>Ask any question. Claude, ChatGPT, and Grok each answer independently, then debate each other — and you get one refined, best-possible answer.</p>
+        <div class="feature-grid">
+          <div class="feature-card"><div class="icon">🤝</div><h3>3-Way Debate</h3><p>Three AIs argue it out so you don't have to go back and forth between apps.</p></div>
+          <div class="feature-card"><div class="icon">📎</div><h3>Files & Images</h3><p>Upload PDFs, photos, docs — all three AIs analyze them together.</p></div>
+          <div class="feature-card"><div class="icon">💬</div><h3>Full History</h3><p>All conversations saved. Pick up where you left off, any time.</p></div>
+          <div class="feature-card"><div class="icon">📊</div><h3>Trend Tracking</h3><p>See which AI changes its mind most and how they evolve over time.</p></div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function showToast(msg, dur = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function aiLabel(name) {
+  return { claude: 'Claude', chatgpt: 'ChatGPT', grok: 'Grok' }[name] || name;
+}
+</script>
+</body>
+</html>
