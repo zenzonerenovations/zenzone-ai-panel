@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import (
-    Conversation, Message, AIResponse, FileAttachment,
+    Conversation, Message, AIResponse, FileAttachment, TokenUsage,
     get_db, init_db,
 )
 from debate import run_debate
@@ -131,7 +131,7 @@ async def chat(conv_id: int, body: ChatRequest, db: Session = Depends(get_db)):
 
     # Auto-title the conversation from the first message
     if len(conv.messages) == 0:
-        conv.title = body.question[:80] + ("…" if len(body.question) > 80 else "")
+        conv.title = body.question[:80] + ("\u2026" if len(body.question) > 80 else "")
 
     conv.updated_at = datetime.utcnow()
     db.commit()
@@ -201,6 +201,15 @@ async def chat(conv_id: int, body: ChatRequest, db: Session = Depends(get_db)):
                 )
                 new_db.add(ai_r)
 
+            # Save token usage per AI
+            for ai_name, usage in result.get("token_usage", {}).items():
+                new_db.add(TokenUsage(
+                    ai_name=ai_name,
+                    input_tokens=usage["input_tokens"],
+                    output_tokens=usage["output_tokens"],
+                    estimated_cost_usd=str(usage["cost_usd"]),
+                ))
+
             # Touch conversation timestamp
             c = new_db.query(Conversation).filter(Conversation.id == conv_id).first()
             if c:
@@ -216,6 +225,40 @@ async def chat(conv_id: int, body: ChatRequest, db: Session = Depends(get_db)):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ── Usage / Cost tracker ─────────────────────────────────────────────────────
+
+@app.get("/api/usage")
+def get_usage(db: Session = Depends(get_db)):
+    """Return cumulative token usage and estimated cost per AI."""
+    from sqlalchemy import func
+    pricing = {
+        "claude":  {"input": 15.00, "output": 75.00, "model": "claude-opus-4-6"},
+        "chatgpt": {"input":  2.50, "output": 10.00, "model": "gpt-4o"},
+        "grok":    {"input":  3.00, "output": 15.00, "model": "grok-3"},
+    }
+    result = {}
+    grand_cost = 0.0
+    for ai in ("claude", "chatgpt", "grok"):
+        rows = db.query(
+            func.sum(TokenUsage.input_tokens),
+            func.sum(TokenUsage.output_tokens),
+        ).filter(TokenUsage.ai_name == ai).one()
+        inp  = rows[0] or 0
+        out  = rows[1] or 0
+        cost = (inp * pricing[ai]["input"] + out * pricing[ai]["output"]) / 1_000_000
+        grand_cost += cost
+        result[ai] = {
+            "model":         pricing[ai]["model"],
+            "input_tokens":  inp,
+            "output_tokens": out,
+            "total_tokens":  inp + out,
+            "cost_usd":      round(cost, 4),
+            "input_rate":    pricing[ai]["input"],
+            "output_rate":   pricing[ai]["output"],
+        }
+    return {"by_ai": result, "total_cost_usd": round(grand_cost, 4)}
 
 
 # ── File upload ───────────────────────────────────────────────────────────────
@@ -258,7 +301,7 @@ def get_trends(db: Session = Depends(get_db)):
                 "date":    r.created_at.isoformat(),
                 "ai":      r.ai_name,
                 "changed": r.changed_position,
-                "preview": msg.content[:80] + "…" if len(msg.content) > 80 else msg.content,
+                "preview": msg.content[:80] + "\u2026" if len(msg.content) > 80 else msg.content,
                 "conv_id": msg.conversation_id,
             })
 
