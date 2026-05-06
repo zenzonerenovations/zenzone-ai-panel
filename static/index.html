@@ -366,7 +366,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1a1a2e; 
   <div id="trends-panel"></div>
 
   <div id="sidebar-footer">
-    <div class="sidebar-link" onclick="showToast('Add your API keys to the .env file to enable all AIs.')">⚙ API Keys</div>
+    <div class="sidebar-link" onclick="openUsageModal()">💳 API Usage &amp; Cost</div>
     <div class="sidebar-link" onclick="window.open('https://render.com','_blank')">🚀 Hosted on Render</div>
   </div>
 </nav>
@@ -943,6 +943,63 @@ function unavailableWarning(aiResponses) {
 function aiLabel(name) {
   return { claude: 'Claude', chatgpt: 'ChatGPT', grok: 'Grok' }[name] || name;
 }
+
+// ── Usage & Cost modal ──────────────────────────────────────────────────────
+async function openUsageModal() {
+  const modal = document.getElementById('usage-modal');
+  const content = document.getElementById('usage-content');
+  modal.style.display = 'flex';
+  content.innerHTML = 'Loading…';
+  try {
+    const res = await fetch('/api/usage');
+    const data = await res.json();
+    const colors = { claude: '#c9784a', chatgpt: '#10a37f', grok: '#1d9bf0' };
+    const labels = { claude: 'Claude (Opus)', chatgpt: 'ChatGPT (GPT-4o)', grok: 'Grok-3' };
+    let html = '';
+    let maxCost = Math.max(...Object.values(data.by_ai).map(a => a.cost_usd), 0.0001);
+    for (const [ai, info] of Object.entries(data.by_ai)) {
+      const pct = Math.round((info.cost_usd / maxCost) * 100);
+      html += `<div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-weight:600;color:${colors[ai]}">${labels[ai]}</span>
+          <span style="color:var(--text-muted)">$${info.cost_usd.toFixed(4)}</span>
+        </div>
+        <div style="background:var(--bg-primary);border-radius:4px;height:8px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${colors[ai]};border-radius:4px;transition:width .4s;"></div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:4px;font-size:11px;color:var(--text-muted);">
+          <span>In: ${info.input_tokens.toLocaleString()} tok</span>
+          <span>Out: ${info.output_tokens.toLocaleString()} tok</span>
+          <span>$${info.input_rate}/$${info.output_rate} per M</span>
+        </div>
+      </div>`;
+    }
+    html += `<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px;display:flex;justify-content:space-between;font-weight:600;">
+      <span>Total estimated cost</span><span>$${data.total_cost_usd.toFixed(4)}</span>
+    </div>
+    <p style="margin:8px 0 0;font-size:11px;color:var(--text-muted);">Rates: Claude $15/$75 · GPT-4o $2.50/$10 · Grok-3 $3/$15 per million tokens</p>`;
+    content.innerHTML = html;
+  } catch(e) {
+    content.innerHTML = '<div style="color:var(--text-muted)">Could not load usage data.</div>';
+  }
+}
+function closeUsageModal() {
+  document.getElementById('usage-modal').style.display = 'none';
+}
+document.addEventListener('click', e => {
+  const modal = document.getElementById('usage-modal');
+  if (e.target === modal) closeUsageModal();
+});
 </script>
+
+  <!-- Usage modal -->
+  <div id="usage-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;">
+    <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;position:relative;">
+      <button onclick="closeUsageModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;">✕</button>
+      <h3 style="margin:0 0 4px;font-size:15px;font-weight:600;">💳 API Usage &amp; Estimated Cost</h3>
+      <p style="margin:0 0 16px;font-size:12px;color:var(--text-muted);">Tracked from this session's API responses. Resets when the database is cleared.</p>
+      <div id="usage-content" style="font-size:13px;">Loading…</div>
+    </div>
+  </div>
 </body>
 </html>
