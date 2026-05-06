@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 190" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Chimney -->
+  <rect x="54" y="18" width="20" height="42" rx="1"/>
+  <!-- Roof left -->
+  <line x1="14" y1="88" x2="100" y2="18"/>
+  <!-- Roof right -->
+  <line x1="100" y1="18" x2="186" y2="88"/>
+  <!-- Left wall -->
+  <line x1="14" y1="88" x2="14" y2="182"/>
+  <!-- Right wall -->
+  <line x1="186" y1="88" x2="186" y2="182"/>
+  <!-- Floor -->
+  <line x1="14" y1="182" x2="186" y2="182"/>
+
+  <!-- Lotus: center petal (tall, pointing up) -->
+  <path d="M100,162 C92,145 88,118 100,95 C112,118 108,145 100,162Z"/>
+  <!-- Lotus: left middle petal -->
+  <path d="M100,162 C88,150 72,130 78,105 C90,112 100,135 100,162Z"/>
+  <!-- Lotus: right middle petal -->
+  <path d="M100,162 C112,150 128,130 122,105 C110,112 100,135 100,162Z"/>
+  <!-- Lotus: left outer base petal -->
+  <path d="M100,162 C82,162 58,152 50,132 C68,126 88,142 100,162Z"/>
+  <!-- Lotus: right outer base petal -->
+  <path d="M100,162 C118,162 142,152 150,132 C132,126 112,142 100,162Z"/>
+</svg>
