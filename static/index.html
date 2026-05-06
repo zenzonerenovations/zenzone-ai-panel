@@ -1023,6 +1023,17 @@ document.addEventListener('click', e => {
   const modal = document.getElementById('usage-modal');
   if (e.target === modal) closeUsageModal();
 });
+
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/static/sw.js').catch(function(){});
+  });
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    window._installPrompt = e;
+  });
+}
 </script>
 
   <!-- Usage modal -->
