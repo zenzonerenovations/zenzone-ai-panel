@@ -930,15 +930,16 @@ async function sendMessage() {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let streamDone = false;
 
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done || streamDone) break;
       buffer += decoder.decode(value, { stream: true });
       const parts = buffer.split('\n\n');
       buffer = parts.pop();
       for (const part of parts) {
-        processSSEChunk(part, thinkingEl);
+        if (processSSEChunk(part, thinkingEl)) streamDone = true;
       }
     }
   } catch(e) {
@@ -1022,11 +1023,14 @@ function processSSEChunk(chunk, thinkingEl) {
     const card = makeAICard(data.synthesis, data.summary, buildAIResponsesFromResult(data));
     document.getElementById('messages').appendChild(card);
     scrollToBottom();
+    return true; // terminal event — break the read loop
   } else if (event === 'error') {
     thinkingEl.remove();
     document.getElementById('messages').appendChild(makeErrorCard(data.message));
     scrollToBottom();
+    return true; // terminal event — break the read loop
   }
+  return false;
 }
 
 function buildAIResponsesFromResult(result) {
