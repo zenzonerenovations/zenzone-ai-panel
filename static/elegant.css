@@ -1,0 +1,36 @@
+/* ZenZone Elegant Output Overrides */
+.answer-body { font-size: 14.5px; line-height: 1.72; }
+.answer-body h1 { font-size: 19px; font-weight: 800; margin: 0 0 1.1em; padding: 14px 18px; background: linear-gradient(135deg, #1B2A4A 0%, #2D4270 100%); color: white; border-radius: 10px; letter-spacing: -.015em; border-bottom: none; }
+.answer-body h2 { font-size: 15.5px; font-weight: 700; color: #1B2A4A; margin: 1.7em 0 .65em; padding: 9px 14px; background: linear-gradient(90deg, #EEF4FF 0%, rgba(238,244,255,0) 100%); border-left: 3px solid #2D6CDF; border-radius: 0 6px 6px 0; border-bottom: none; }
+.answer-body h3 { font-size: 13.5px; font-weight: 700; color: #2D4270; margin: 1.3em 0 .45em; padding-bottom: 5px; border-bottom: 1px dashed #C8D6EF; }
+.answer-body hr { height: 2px; border: none; margin: 1.8em 0; background: linear-gradient(90deg, #2D4270 0%, rgba(45,66,112,0) 85%); opacity: .28; }
+.answer-body table { border-collapse: separate !important; border-spacing: 0 !important; width: 100%; margin: 1.1em 0 1.4em; font-size: 13px; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px #D8E2F0, 0 2px 8px rgba(0,0,0,.06); }
+.answer-body thead tr { background: linear-gradient(135deg, #1B2A4A 0%, #2D4270 100%); }
+.answer-body th { padding: 10px 14px !important; text-align: left !important; font-weight: 600 !important; color: rgba(255,255,255,.9) !important; font-size: 11.5px !important; letter-spacing: .045em; text-transform: uppercase; border: none !important; white-space: nowrap; }
+.answer-body th:not(:first-child) { text-align: right !important; }
+.answer-body td { padding: 9px 14px !important; border: none !important; border-top: 1px solid #EDF1F9 !important; color: #1e2540; vertical-align: top; }
+.answer-body td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.answer-body tbody tr:nth-child(even) td { background: #F6F9FF; }
+.answer-body tbody tr:hover td { background: #EBF2FF !important; transition: background .1s ease; }
+.answer-body tbody tr:last-child td { font-weight: 700; background: #F0F4FB; border-top: 2px solid #2D4270 !important; }
+.answer-body tfoot td { font-weight: 700 !important; background: #F0F4FB; border-top: 2px solid #2D4270 !important; font-size: 13px; }
+.answer-body blockquote { margin: .7em 0 1.3em; padding: 11px 16px 11px 46px; background: #FFFBEF; border: 1px solid #FDE8A0; border-left: 4px solid #F59E0B; border-radius: 0 10px 10px 0; font-size: 12.5px; line-height: 1.65; color: #5a4200; position: relative; }
+.answer-body blockquote p { margin: 0; color: inherit; }
+.answer-body blockquote strong { color: #7a5900; }
+.answer-body code { background: #F2F5FB; padding: 2px 6px; border-radius: 4px; font-size: 12.5px; color: #C04800; border: 1px solid #E2E8F4; }
+.est-result-card { border-radius: 14px !important; box-shadow: 0 4px 24px rgba(0,0,0,.09) !important; border-color: #D0DCF0 !important; }
+.est-result-header { background: linear-gradient(135deg, #1B2A4A 0%, #2D4270 100%) !important; padding: 22px 26px !important; }
+.est-result-header h3 { font-size: 16px !important; letter-spacing: -.01em; }
+.bid-card { background: linear-gradient(135deg, #EAF2FF 0%, #F5F9FF 100%) !important; border-radius: 12px !important; }
+.bid-card .bid-label { font-size: 10.5px !important; font-weight: 700 !important; letter-spacing: .07em !important; text-transform: uppercase; color: #7A8FAA !important; }
+.bid-card .bid-amount { font-size: 38px !important; }
+.approve-btn { background: linear-gradient(135deg, #2ea84e, #1e7e34) !important; border-radius: 10px !important; box-shadow: 0 2px 10px rgba(30,126,52,.28) !important; }
+.approve-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(30,126,52,.38) !important; }
+.est-table { border-collapse: separate !important; border-spacing: 0 !important; border-radius: 10px !important; overflow: hidden; box-shadow: 0 0 0 1px #D8E2F0 !important; }
+.est-table thead tr { background: linear-gradient(135deg, #1B2A4A 0%, #2D4270 100%); }
+.est-table th { background: none !important; color: rgba(255,255,255,.88) !important; font-size: 11px !important; letter-spacing: .045em !important; text-transform: uppercase; border: none !important; padding: 10px 13px !important; }
+.est-table td { border: none !important; border-top: 1px solid #EDF1F9 !important; padding: 9px 13px !important; }
+.est-table tbody tr:nth-child(even) td { background: #F6F9FF; }
+.est-table tbody tr:hover td { background: #EBF2FF; transition: background .1s; }
+.est-table tfoot td { background: #F0F4FB !important; border-top: 2px solid #2D4270 !important; }
+.est-context-box { background: #FFFBEF !important; border-color: #FDE8A0 !important; border-left-color: #F59E0B !important; border-radius: 0 10px 10px 0 !important; color: #5a4200 !important; padding-left: 40px !important; position: relative; }
