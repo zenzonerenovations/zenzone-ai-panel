@@ -87,6 +87,23 @@ class TokenUsage(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class Estimate(Base):
+    """Saved renovation estimates from the Estimator tab."""
+    __tablename__ = "estimates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_type = Column(String(100), nullable=False)
+    city = Column(String(200), nullable=False)
+    sqft = Column(String(50), nullable=True)
+    quality = Column(String(50), nullable=True)
+    scope = Column(Text, nullable=True)          # JSON array of scope items
+    description = Column(Text, nullable=True)
+    result_json = Column(Text, nullable=True)    # Full synthesized result as JSON
+    recommended_bid = Column(Integer, default=0)
+    status = Column(String(20), default="draft") # draft | approved
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 def get_db():
     db = SessionLocal()
     try:
