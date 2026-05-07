@@ -238,6 +238,28 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1a1a2e; 
   animation: spin .7s linear infinite; flex-shrink: 0;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* Progress steps */
+.debate-steps { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.debate-step {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; color: #999; transition: color .3s;
+}
+.debate-step .step-icon {
+  width: 22px; height: 22px; border-radius: 50%; border: 2px solid #E0E4EB;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; flex-shrink: 0; transition: all .3s; background: #F7F8FA;
+}
+.debate-step.active { color: var(--blue); font-weight: 600; }
+.debate-step.active .step-icon {
+  border-color: var(--blue); background: var(--blue); color: white;
+  animation: pulse-step 1.2s ease-in-out infinite;
+}
+.debate-step.done { color: #28a745; }
+.debate-step.done .step-icon { border-color: #28a745; background: #28a745; color: white; }
+@keyframes pulse-step {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(43,126,193,.4); }
+  50% { box-shadow: 0 0 0 5px rgba(43,126,193,0); }
+}
 .ai-thinking-row { display: flex; gap: 10px; }
 .ai-chip {
   flex: 1; background: #F7F8FA; border: 1px solid #E0E4EB;
@@ -329,6 +351,162 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1a1a2e; 
   .feature-grid { grid-template-columns: 1fr; }
   .msg-user .bubble { max-width: 90%; }
 }
+
+/* ── Stop button ─────────────────────────────────────────────────── */
+#stop-btn {
+  width: 42px; height: 42px; flex-shrink: 0;
+  background: #F44336; border: none; border-radius: 10px;
+  cursor: pointer; display: none; align-items: center; justify-content: center;
+  color: white; font-size: 16px; transition: background .15s;
+}
+#stop-btn.visible { display: flex; }
+#stop-btn:hover { background: #D32F2F; }
+
+/* ── Queue input ─────────────────────────────────────────────────── */
+#queue-wrap {
+  display: none; margin-bottom: 8px;
+  background: #FFF8E1; border: 1px dashed #FFB300; border-radius: 8px;
+  padding: 8px 12px; gap: 8px; align-items: flex-end;
+}
+#queue-wrap.visible { display: flex; }
+#queue-label { font-size: 11px; color: #B45309; white-space: nowrap; align-self: center; font-weight: 600; }
+#queue-input {
+  flex: 1; min-height: 36px; max-height: 100px; padding: 7px 10px;
+  border: 1px solid #FFC107; border-radius: 8px; font-size: 14px;
+  font-family: inherit; resize: none; outline: none; background: #FFFDE7; line-height: 1.4;
+}
+#queue-input:focus { border-color: #F59E0B; }
+#queue-send-btn {
+  width: 36px; height: 36px; flex-shrink: 0; background: #F59E0B;
+  border: none; border-radius: 8px; cursor: pointer; color: white;
+  font-size: 14px; display: flex; align-items: center; justify-content: center;
+}
+#queue-send-btn:hover { background: #D97706; }
+
+/* ── Estimates sidebar panel ─────────────────────────────────────── */
+#estimates-panel { flex: 1; overflow-y: auto; padding: 4px 8px; display: none; }
+#estimates-panel.visible { display: block; }
+.est-item {
+  padding: 10px; border-radius: var(--radius-sm); cursor: pointer;
+  font-size: 12px; color: var(--text-muted); margin-bottom: 4px;
+  border: 1px solid transparent; transition: all .15s; background: var(--dark2);
+}
+.est-item:hover { border-color: var(--border); color: var(--text); }
+.est-item.active { border-color: var(--blue); color: var(--text); }
+.est-item .est-title { font-weight: 600; color: var(--text); font-size: 13px; margin-bottom: 2px; }
+.est-item .est-meta { color: var(--text-muted); }
+.est-item .est-bid { color: var(--blue-light); font-weight: 600; }
+.est-approved { display: inline-block; background: #28a745; color: white; font-size: 10px; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
+
+/* ── Estimator main area ─────────────────────────────────────────── */
+#estimator-area { flex: 1; overflow-y: auto; padding: 24px 20px; display: none; }
+#estimator-area.visible { display: block; }
+#estimator-inner { max-width: 760px; margin: 0 auto; }
+
+.est-form-card {
+  background: var(--white); border: 1px solid #E0E4EB;
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px;
+}
+.est-form-card h2 { font-size: 18px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+.est-form-card .subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 12px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .04em; }
+.form-group select, .form-group input[type="text"], .form-group textarea {
+  padding: 9px 12px; border: 1px solid #D8DDE8; border-radius: 8px;
+  font-size: 14px; font-family: inherit; outline: none; background: #FAFBFD; transition: border-color .15s;
+}
+.form-group select:focus, .form-group input[type="text"]:focus, .form-group textarea:focus {
+  border-color: var(--blue); background: #fff;
+}
+.form-group textarea { min-height: 80px; resize: vertical; }
+.scope-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 4px; }
+.scope-check {
+  display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555; cursor: pointer;
+  padding: 5px 8px; border: 1px solid #E0E4EB; border-radius: 6px; background: #F7F8FA;
+  transition: all .15s; user-select: none;
+}
+.scope-check:hover { border-color: var(--blue); }
+.scope-check input { display: none; }
+.scope-check.checked { background: #EEF6FF; border-color: var(--blue); color: var(--blue-dark); font-weight: 500; }
+.quality-row { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.quality-btn {
+  padding: 7px 16px; border: 1px solid #D8DDE8; border-radius: 20px; font-size: 13px;
+  cursor: pointer; background: #F7F8FA; color: #555; transition: all .15s; font-family: inherit;
+}
+.quality-btn:hover { border-color: var(--blue); }
+.quality-btn.selected { background: var(--blue); border-color: var(--blue); color: white; font-weight: 600; }
+#run-estimate-btn {
+  width: 100%; padding: 13px; margin-top: 18px; background: var(--blue); border: none;
+  border-radius: 10px; color: white; font-size: 15px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background .15s; font-family: inherit;
+}
+#run-estimate-btn:hover { background: var(--blue-dark); }
+#run-estimate-btn:disabled { background: #B0C4D8; cursor: not-allowed; }
+
+.est-progress-card {
+  background: var(--white); border: 1px solid #E0E4EB;
+  border-radius: var(--radius); padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow);
+}
+.est-progress-title { font-size: 14px; font-weight: 600; color: var(--dark); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+.est-result-card {
+  background: var(--white); border: 1px solid #E0E4EB;
+  border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px;
+}
+.est-result-header {
+  background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
+  padding: 16px 20px;
+}
+.est-result-header h3 { color: white; font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+.est-result-header p { color: rgba(255,255,255,.6); font-size: 12px; }
+.bid-card {
+  margin: 20px; padding: 20px; background: linear-gradient(135deg, #EEF6FF, #F0F9FF);
+  border: 2px solid var(--blue); border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+.bid-card .bid-label { font-size: 13px; color: #555; margin-bottom: 4px; }
+.bid-card .bid-amount { font-size: 32px; font-weight: 800; color: var(--blue-dark); line-height: 1; }
+.bid-card .bid-sub { font-size: 12px; color: #888; margin-top: 4px; }
+.bid-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.approve-btn {
+  padding: 9px 20px; background: #28a745; border: none; border-radius: 8px;
+  color: white; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s;
+}
+.approve-btn:hover { background: #1e7e34; }
+.approve-btn:disabled { background: #9BC4A8; cursor: not-allowed; }
+
+.line-items-section { padding: 0 20px 20px; }
+.line-items-section h4 { font-size: 13px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
+.est-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.est-table th { background: #F0F4FB; padding: 9px 12px; text-align: left; font-weight: 600; color: #555; border: 1px solid #E0E4EB; font-size: 12px; }
+.est-table th:not(:first-child) { text-align: right; }
+.est-table td { padding: 8px 12px; border: 1px solid #E0E4EB; color: #333; }
+.est-table td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.est-table tr:hover td { background: #F8FAFF; }
+.est-table tfoot td { font-weight: 700; background: #F0F4FB; border-top: 2px solid var(--blue); }
+
+.est-context-section { padding: 0 20px 20px; }
+.est-context-box {
+  background: #F8FAFF; border-left: 3px solid var(--blue);
+  padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 13px; line-height: 1.6; color: #444; margin-bottom: 12px;
+}
+.est-sources { font-size: 12px; color: #888; }
+.est-sources a { color: var(--blue); text-decoration: none; }
+.est-sources a:hover { text-decoration: underline; }
+.ai-totals-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.ai-total-chip { flex: 1; min-width: 140px; padding: 10px 12px; border-radius: 8px; border: 1px solid #E0E4EB; font-size: 12px; background: #F7F8FA; }
+.ai-total-chip .name { font-weight: 600; margin-bottom: 4px; }
+.ai-total-chip.claude .name { color: #C45000; }
+.ai-total-chip.chatgpt .name { color: #0A7A45; }
+.ai-total-chip.grok .name { color: #6B2FD9; }
+.ai-total-chip .amounts { color: #555; }
+
+@media (max-width: 680px) {
+  .form-row { grid-template-columns: 1fr; }
+  .scope-grid { grid-template-columns: 1fr 1fr; }
+}
 </style>
 </head>
 <body>
@@ -360,14 +538,26 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1a1a2e; 
   <div id="nav-tabs">
     <button class="nav-tab active" data-tab="chats">Chats</button>
     <button class="nav-tab" data-tab="trends">Trends</button>
+    <button class="nav-tab" data-tab="estimator">Estimate</button>
   </div>
 
   <div id="conv-list"></div>
   <div id="trends-panel"></div>
+  <div id="estimates-panel"></div>
 
   <div id="sidebar-footer">
     <div class="sidebar-link" onclick="openUsageModal()">💳 API Usage &amp; Cost</div>
     <div class="sidebar-link" onclick="window.open('https://render.com','_blank')">🚀 Hosted on Render</div>
+  </div>
+
+  <!-- Usage modal -->
+  <div id="usage-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;">
+    <div style="background:var(--dark2);border:1px solid var(--border);border-radius:12px;width:420px;max-width:95vw;padding:24px;position:relative;">
+      <button onclick="closeUsageModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;">✕</button>
+      <h3 style="margin:0 0 4px;font-size:15px;font-weight:600;">💳 API Usage &amp; Estimated Cost</h3>
+      <p style="margin:0 0 16px;font-size:12px;color:var(--text-muted);">Tracked from API responses. Prices are estimates based on published rates.</p>
+      <div id="usage-content" style="font-size:13px;">Loading…</div>
+    </div>
   </div>
 </nav>
 
@@ -427,9 +617,110 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1a1a2e; 
     </div>
   </div>
 
+  <!-- Estimator area -->
+  <div id="estimator-area">
+    <div id="estimator-inner">
+      <!-- Form card -->
+      <div class="est-form-card">
+        <h2>🔍 AI Renovation Estimator</h2>
+        <p class="subtitle">Claude, ChatGPT, and Grok each search the live web for current contractor pricing in your market, then synthesize a consensus estimate.</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Project Type</label>
+            <select id="est-project-type">
+              <option value="bathroom remodel">Bathroom Remodel</option>
+              <option value="kitchen remodel">Kitchen Remodel</option>
+              <option value="full home renovation">Full Home Renovation</option>
+              <option value="basement finishing">Basement Finishing</option>
+              <option value="addition">Room Addition</option>
+              <option value="roof replacement">Roof Replacement</option>
+              <option value="flooring">Flooring</option>
+              <option value="painting">Interior/Exterior Painting</option>
+              <option value="HVAC installation">HVAC Installation</option>
+              <option value="plumbing">Plumbing Work</option>
+              <option value="electrical">Electrical Work</option>
+              <option value="deck or patio">Deck / Patio</option>
+              <option value="window replacement">Window Replacement</option>
+              <option value="custom renovation">Custom / Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>City &amp; State</label>
+            <input type="text" id="est-city" placeholder="e.g. Los Angeles, CA"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Square Footage</label>
+            <input type="text" id="est-sqft" placeholder="e.g. 150 (optional)"/>
+          </div>
+          <div class="form-group">
+            <label>Quality Tier</label>
+            <div class="quality-row">
+              <button class="quality-btn" data-quality="budget" onclick="selectQuality(this)">Budget</button>
+              <button class="quality-btn selected" data-quality="mid-range" onclick="selectQuality(this)">Mid-Range</button>
+              <button class="quality-btn" data-quality="premium" onclick="selectQuality(this)">Premium</button>
+              <button class="quality-btn" data-quality="luxury" onclick="selectQuality(this)">Luxury</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label>Scope of Work</label>
+          <div class="scope-grid" id="scope-grid">
+            <label class="scope-check"><input type="checkbox" value="demo"/>Demolition</label>
+            <label class="scope-check"><input type="checkbox" value="plumbing"/>Plumbing</label>
+            <label class="scope-check"><input type="checkbox" value="electrical"/>Electrical</label>
+            <label class="scope-check"><input type="checkbox" value="framing"/>Framing</label>
+            <label class="scope-check"><input type="checkbox" value="tile"/>Tile / Flooring</label>
+            <label class="scope-check"><input type="checkbox" value="drywall"/>Drywall / Paint</label>
+            <label class="scope-check"><input type="checkbox" value="cabinetry"/>Cabinetry</label>
+            <label class="scope-check"><input type="checkbox" value="countertops"/>Countertops</label>
+            <label class="scope-check"><input type="checkbox" value="fixtures"/>Fixtures</label>
+            <label class="scope-check"><input type="checkbox" value="hvac"/>HVAC / Venting</label>
+            <label class="scope-check"><input type="checkbox" value="doors"/>Doors / Windows</label>
+            <label class="scope-check"><input type="checkbox" value="permits"/>Permits</label>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Additional Details</label>
+          <textarea id="est-description" placeholder="Describe any special requirements, existing conditions, materials preferences, etc…"></textarea>
+        </div>
+        <button id="run-estimate-btn" onclick="runEstimate()">
+          <span>🔍</span> Search Web &amp; Get Estimate from 3 AIs
+        </button>
+      </div>
+
+      <!-- Progress card (shown while running) -->
+      <div id="est-progress-card" class="est-progress-card" style="display:none">
+        <div class="est-progress-title">
+          <div class="spinner" style="width:18px;height:18px;border:2px solid #E0E4EB;border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>
+          <span id="est-progress-text">Searching the web for current pricing…</span>
+        </div>
+        <div class="debate-steps">
+          <div class="debate-step active" data-step="0"><div class="step-icon">1</div><span>Searching live web for contractor pricing</span></div>
+          <div class="debate-step" data-step="1"><div class="step-icon">2</div><span>Parsing estimates from Claude, ChatGPT &amp; Grok</span></div>
+          <div class="debate-step" data-step="2"><div class="step-icon">3</div><span>Synthesizing consensus estimate</span></div>
+        </div>
+        <div class="ai-thinking-row" style="margin-top:12px">
+          <div class="ai-chip claude"><div class="dot"></div>Claude searching…</div>
+          <div class="ai-chip chatgpt"><div class="dot"></div>ChatGPT searching…</div>
+          <div class="ai-chip grok"><div class="dot"></div>Grok searching…</div>
+        </div>
+      </div>
+
+      <!-- Result area -->
+      <div id="est-result-area"></div>
+    </div>
+  </div>
+
   <!-- Input bar -->
   <div id="input-wrap">
     <div id="input-inner">
+      <div id="queue-wrap">
+        <span id="queue-label">⏳ Queue next:</span>
+        <textarea id="queue-input" rows="1" placeholder="Type your next question — it'll fire when the current one finishes…"></textarea>
+        <button id="queue-send-btn" title="Queue this question" onclick="queueMessage()">➤</button>
+      </div>
       <div id="file-preview">
         <span id="file-preview-icon">📎</span>
         <span id="file-preview-name"></span>
@@ -439,6 +730,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1a1a2e; 
         <button id="upload-btn" onclick="document.getElementById('file-input').click()" title="Attach file or image">📎</button>
         <input type="file" id="file-input" accept="image/*,.pdf,.docx,.txt,.csv,.md,.json"/>
         <textarea id="msg-input" placeholder="Ask anything — all three AIs will weigh in…" rows="1"></textarea>
+        <button id="stop-btn" onclick="stopStream()" title="Stop generating">■ Stop</button>
         <button id="send-btn" onclick="sendMessage()">➤</button>
       </div>
       <div id="input-hint">Claude · ChatGPT · Grok — 2 rounds of debate → 1 best answer</div>
@@ -453,6 +745,11 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1a1a2e; 
 let currentConvId = null;
 let pendingFile = null;    // { name, text, is_image, image_base64 }
 let isStreaming = false;
+let streamAbort = null;    // AbortController for current stream
+let pendingQueue = '';     // queued next message
+let currentEstimateId = null;
+let selectedQuality = 'mid-range';
+let isEstimating = false;
 
 // ── Init ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -461,6 +758,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupTabs();
   setupFileInput();
   setupOverlay();
+  setupScopeChecks();
+  setupQueueInput();
 });
 
 // ── Sidebar toggle (mobile) ────────────────────────────────────────────────
@@ -482,10 +781,28 @@ function setupTabs() {
       document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const tab = btn.dataset.tab;
-      document.getElementById('conv-list').style.display   = tab === 'chats'  ? '' : 'none';
+
+      // Sidebar panels
+      document.getElementById('conv-list').style.display     = tab === 'chats'     ? '' : 'none';
       const tp = document.getElementById('trends-panel');
-      if (tab === 'trends') { tp.classList.add('visible'); loadTrends(); }
-      else { tp.classList.remove('visible'); }
+      const ep = document.getElementById('estimates-panel');
+      if (tab === 'trends')    { tp.classList.add('visible'); ep.classList.remove('visible'); loadTrends(); }
+      else if (tab === 'estimator') { ep.classList.add('visible'); tp.classList.remove('visible'); loadEstimates(); }
+      else { tp.classList.remove('visible'); ep.classList.remove('visible'); }
+
+      // Main content panels
+      const chatArea = document.getElementById('chat-area');
+      const inputWrap = document.getElementById('input-wrap');
+      const estimatorArea = document.getElementById('estimator-area');
+      if (tab === 'estimator') {
+        chatArea.style.display = 'none';
+        inputWrap.style.display = 'none';
+        estimatorArea.classList.add('visible');
+      } else {
+        chatArea.style.display = '';
+        inputWrap.style.display = '';
+        estimatorArea.classList.remove('visible');
+      }
     });
   });
 }
@@ -579,7 +896,10 @@ async function sendMessage() {
   input.value = '';
   input.style.height = '';
   isStreaming = true;
+  streamAbort = new AbortController();
   document.getElementById('send-btn').disabled = true;
+  document.getElementById('stop-btn').classList.add('visible');
+  document.getElementById('queue-wrap').classList.add('visible');
 
   // Show user bubble
   const msgEl = document.getElementById('messages');
@@ -597,7 +917,6 @@ async function sendMessage() {
     file_name: pendingFile?.name || null,
     is_image:  pendingFile?.is_image || false,
   };
-  const fileToClear = pendingFile;
   clearFile();
 
   try {
@@ -605,6 +924,7 @@ async function sendMessage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal: streamAbort.signal,
     });
 
     const reader = res.body.getReader();
@@ -623,13 +943,53 @@ async function sendMessage() {
     }
   } catch(e) {
     thinkingEl.remove();
-    msgEl.appendChild(makeErrorCard('Connection error: ' + e.message));
-    scrollToBottom();
+    if (e.name !== 'AbortError') {
+      msgEl.appendChild(makeErrorCard('Connection error: ' + e.message));
+      scrollToBottom();
+    }
   }
 
   isStreaming = false;
+  streamAbort = null;
   document.getElementById('send-btn').disabled = false;
+  document.getElementById('stop-btn').classList.remove('visible');
+  document.getElementById('queue-wrap').classList.remove('visible');
+
+  // Fire queued message
+  const queuedQuestion = pendingQueue;
+  pendingQueue = '';
+  const queueInput = document.getElementById('queue-input');
+  if (queueInput) queueInput.value = '';
   loadConversations();
+  if (queuedQuestion) {
+    document.getElementById('msg-input').value = queuedQuestion;
+    setTimeout(sendMessage, 300);
+  }
+}
+
+// ── Stop stream ────────────────────────────────────────────────────────────
+function stopStream() {
+  if (streamAbort) { streamAbort.abort(); showToast('Stopped ✓'); }
+}
+
+// ── Queue message ──────────────────────────────────────────────────────────
+function queueMessage() {
+  const q = document.getElementById('queue-input').value.trim();
+  if (!q) return;
+  pendingQueue = q;
+  showToast('Queued — will fire when done ✓');
+}
+
+function setupQueueInput() {
+  const qi = document.getElementById('queue-input');
+  if (!qi) return;
+  qi.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); queueMessage(); }
+  });
+  qi.addEventListener('input', () => {
+    qi.style.height = 'auto';
+    qi.style.height = Math.min(qi.scrollHeight, 100) + 'px';
+  });
 }
 
 function processSSEChunk(chunk, thinkingEl) {
@@ -845,6 +1205,59 @@ function clearFile() {
   document.getElementById('file-input').value = '';
 }
 
+// ── Usage & Cost modal ──────────────────────────────────────────────────────
+async function openUsageModal() {
+  const modal = document.getElementById('usage-modal');
+  const content = document.getElementById('usage-content');
+  modal.style.display = 'flex';
+  content.innerHTML = '<div style="color:var(--text-muted)">Loading…</div>';
+  try {
+    const res = await fetch('/api/usage');
+    const data = await res.json();
+    const ai_colors = { claude: '#7C5CBF', chatgpt: '#19C37D', grok: '#7E57C2' };
+    const ai_labels = { claude: 'Claude (Opus)', chatgpt: 'ChatGPT (GPT-4o)', grok: 'Grok (Grok-3)' };
+    let html = '';
+    for (const [ai, stats] of Object.entries(data.by_ai)) {
+      const pct = data.total_cost_usd > 0 ? (stats.cost_usd / data.total_cost_usd * 100).toFixed(0) : 0;
+      html += `
+        <div style="margin-bottom:14px;padding:12px;background:var(--dark3);border-radius:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-weight:600;color:${ai_colors[ai]}">${ai_labels[ai]}</span>
+            <span style="font-weight:700;font-size:14px;">$${stats.cost_usd.toFixed(4)}</span>
+          </div>
+          <div style="background:var(--dark2);border-radius:4px;height:5px;margin-bottom:8px;">
+            <div style="background:${ai_colors[ai]};width:${pct}%;height:100%;border-radius:4px;"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;color:var(--text-muted);">
+            <span>Input: ${stats.input_tokens.toLocaleString()} tok</span>
+            <span>$${(stats.input_rate).toFixed(2)}/M in</span>
+            <span>Output: ${stats.output_tokens.toLocaleString()} tok</span>
+            <span>$${(stats.output_rate).toFixed(2)}/M out</span>
+          </div>
+        </div>`;
+    }
+    html += `
+      <div style="border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:var(--text-muted);font-size:12px;">Total estimated spend</span>
+        <span style="font-size:18px;font-weight:700;">$${data.total_cost_usd.toFixed(4)}</span>
+      </div>
+      <p style="margin:8px 0 0;font-size:11px;color:var(--text-muted);">Prices: Claude $15/$75 per M tokens · GPT-4o $2.50/$10 · Grok-3 $3/$15</p>`;
+    content.innerHTML = html;
+  } catch(e) {
+    content.innerHTML = '<div style="color:var(--text-muted)">Could not load usage data.</div>';
+  }
+}
+
+function closeUsageModal() {
+  document.getElementById('usage-modal').style.display = 'none';
+}
+
+// Close modal on backdrop click
+document.addEventListener('click', e => {
+  const modal = document.getElementById('usage-modal');
+  if (e.target === modal) closeUsageModal();
+});
+
 // ── Trends ─────────────────────────────────────────────────────────────────
 async function loadTrends() {
   const panel = document.getElementById('trends-panel');
@@ -956,7 +1369,7 @@ function esc(s) {
     .replace(/"/g,'&quot;');
 }
 
-function renderMd(s) {
+fmunction renderMd(s) {
   if (!s) return '';
   try {
     return typeof marked !== 'undefined' ? marked.parse(s) : esc(s);
@@ -977,73 +1390,305 @@ function aiLabel(name) {
   return { claude: 'Claude', chatgpt: 'ChatGPT', grok: 'Grok' }[name] || name;
 }
 
-// ── Usage & Cost modal ──────────────────────────────────────────────────────
-async function openUsageModal() {
-  const modal = document.getElementById('usage-modal');
-  const content = document.getElementById('usage-content');
-  modal.style.display = 'flex';
-  content.innerHTML = 'Loading…';
+// ── Scope checks & quality buttons ────────────────────────────────────────
+function setupScopeChecks() {
+  document.querySelectorAll('.scope-check').forEach(label => {
+    label.addEventListener('click', () => label.classList.toggle('checked'));
+  });
+}
+
+function selectQuality(btn) {
+  document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedQuality = btn.dataset.quality;
+}
+
+function getScopeValues() {
+  const checked = [];
+  document.querySelectorAll('.scope-check.checked input').forEach(inp => checked.push(inp.value));
+  return checked;
+}
+
+// ── Run Estimate ───────────────────────────────────────────────────────────
+async function runEstimate() {
+  if (isEstimating) return;
+  const city = document.getElementById('est-city').value.trim();
+  if (!city) { showToast('Please enter a city/state ⚠'); document.getElementById('est-city').focus(); return; }
+
+  const formData = {
+    project_type: document.getElementById('est-project-type').value,
+    city,
+    sqft:    document.getElementById('est-sqft').value.trim(),
+    quality: selectedQuality,
+    scope:   getScopeValues(),
+    description: document.getElementById('est-description').value.trim(),
+  };
+
+  isEstimating = true;
+  document.getElementById('run-estimate-btn').disabled = true;
+  document.getElementById('run-estimate-btn').innerHTML = '<span class="spinner" style="width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;"></span> Searching &amp; Estimating…';
+
+  const progressCard = document.getElementById('est-progress-card');
+  const resultArea = document.getElementById('est-result-area');
+  progressCard.style.display = 'block';
+  resultArea.innerHTML = '';
+
+  // Reset steps
+  progressCard.querySelectorAll('.debate-step').forEach((s, i) => {
+    s.classList.remove('active', 'done');
+    if (i === 0) s.classList.add('active');
+  });
+
   try {
-    const res = await fetch('/api/usage');
-    const data = await res.json();
-    const colors = { claude: '#c9784a', chatgpt: '#10a37f', grok: '#1d9bf0' };
-    const labels = { claude: 'Claude (Opus)', chatgpt: 'ChatGPT (GPT-4o)', grok: 'Grok-3' };
-    let html = '';
-    let maxCost = Math.max(...Object.values(data.by_ai).map(a => a.cost_usd), 0.0001);
-    for (const [ai, info] of Object.entries(data.by_ai)) {
-      const pct = Math.round((info.cost_usd / maxCost) * 100);
-      html += `<div style="margin-bottom:14px;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-          <span style="font-weight:600;color:${colors[ai]}">${labels[ai]}</span>
-          <span style="color:var(--text-muted)">$${info.cost_usd.toFixed(4)}</span>
-        </div>
-        <div style="background:var(--bg-primary);border-radius:4px;height:8px;overflow:hidden;">
-          <div style="width:${pct}%;height:100%;background:${colors[ai]};border-radius:4px;transition:width .4s;"></div>
-        </div>
-        <div style="display:flex;gap:12px;margin-top:4px;font-size:11px;color:var(--text-muted);">
-          <span>In: ${info.input_tokens.toLocaleString()} tok</span>
-          <span>Out: ${info.output_tokens.toLocaleString()} tok</span>
-          <span>$${info.input_rate}/$${info.output_rate} per M</span>
-        </div>
-      </div>`;
+    const res = await fetch('/api/estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+    });
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+      for (const part of parts) {
+        processEstimateSSE(part);
+      }
     }
-    html += `<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px;display:flex;justify-content:space-between;font-weight:600;">
-      <span>Total estimated cost</span><span>$${data.total_cost_usd.toFixed(4)}</span>
-    </div>
-    <p style="margin:8px 0 0;font-size:11px;color:var(--text-muted);">Rates: Claude $15/$75 · GPT-4o $2.50/$10 · Grok-3 $3/$15 per million tokens</p>`;
-    content.innerHTML = html;
   } catch(e) {
-    content.innerHTML = '<div style="color:var(--text-muted)">Could not load usage data.</div>';
+    progressCard.style.display = 'none';
+    resultArea.innerHTML = `<div class="est-progress-card" style="border-color:#F44336"><p style="color:#D32F2F">⚠ Error: ${esc(e.message)}</p></div>`;
+  }
+
+  isEstimating = false;
+  document.getElementById('run-estimate-btn').disabled = false;
+  document.getElementById('run-estimate-btn').innerHTML = '<span>🔍</span> Search Web &amp; Get Estimate from 3 AIs';
+  loadEstimates();
+}
+
+function processEstimateSSE(chunk) {
+  const lines = chunk.split('\n');
+  let event = '', data = '';
+  for (const line of lines) {
+    if (line.startsWith('event: ')) event = line.slice(7).trim();
+    if (line.startsWith('data: ')) { try { data = JSON.parse(line.slice(6)); } catch{} }
+  }
+  if (event === 'status') {
+    const txt = document.getElementById('est-progress-text');
+    if (txt) txt.textContent = data.message || '';
+    // step progress
+    const msg = (data.message || '').toLowerCase();
+    let step = -1;
+    if (msg.includes('search')) step = 0;
+    else if (msg.includes('pars')) step = 1;
+    else if (msg.includes('synth')) step = 2;
+    if (step >= 0) {
+      document.querySelectorAll('#est-progress-card .debate-step').forEach(s => {
+        const idx = parseInt(s.dataset.step, 10);
+        s.classList.remove('active', 'done');
+        if (idx < step) s.classList.add('done');
+        else if (idx === step) s.classList.add('active');
+      });
+    }
+  } else if (event === 'result') {
+    document.getElementById('est-progress-card').style.display = 'none';
+    if (data.estimate_id) currentEstimateId = data.estimate_id;
+    document.getElementById('est-result-area').innerHTML = '';
+    document.getElementById('est-result-area').appendChild(renderEstimateResult(data));
+    document.getElementById('est-result-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else if (event === 'error') {
+    document.getElementById('est-progress-card').style.display = 'none';
+    document.getElementById('est-result-area').innerHTML = `<div class="est-progress-card" style="border-color:#F44336"><p style="color:#D32F2F">⚠ ${esc(data.message)}</p></div>`;
   }
 }
-function closeUsageModal() {
-  document.getElementById('usage-modal').style.display = 'none';
+
+function renderEstimateResult(result) {
+  const formData = result.form_data || {};
+  const lineItems = (result.line_items || []).filter(i => i.applicable);
+  const totals = result.project_total || {};
+  const bid = result.recommended_bid || totals.market_rate || 0;
+  const estId = result.estimate_id || currentEstimateId;
+
+  const wrap = document.createElement('div');
+
+  // Header
+  const headerHtml = `
+    <div class="est-result-card">
+      <div class="est-result-header">
+        <h3>🏗 ${esc(formData.project_type || 'Renovation')} — ${esc(formData.city || '')}</h3>
+        <p>${esc(formData.quality || 'Mid-range')} quality${formData.sqft ? ' · ' + esc(formData.sqft) + ' sq ft' : ''} · Live web search from 3 AIs</p>
+      </div>
+
+      <div class="bid-card">
+        <div>
+          <div class="bid-label">Recommended Market-Rate Bid</div>
+          <div class="bid-amount">${fmtDollar(bid)}</div>
+          <div class="bid-sub">Range: ${fmtDollar(totals.conservative || 0)} – ${fmtDollar(totals.premium || 0)}</div>
+        </div>
+        <div class="bid-actions">
+          ${estId ? `<button class="approve-btn" id="approve-btn-${estId}" onclick="approveEstimate(${estId})">✓ Approve Bid</button>` : ''}
+        </div>
+      </div>
+
+      ${lineItems.length ? `
+      <div class="line-items-section">
+        <h4>Line Item Breakdown</h4>
+        <table class="est-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Conservative</th>
+              <th>Market Rate</th>
+              <th>Premium</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lineItems.map(item => `
+              <tr>
+                <td>${esc(item.category)}</td>
+                <td>${fmtDollar(item.conservative)}</td>
+                <td>${fmtDollar(item.market_rate)}</td>
+                <td>${fmtDollar(item.premium)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>Total</td>
+              <td>${fmtDollar(totals.conservative || 0)}</td>
+              <td>${fmtDollar(totals.market_rate || 0)}</td>
+              <td>${fmtDollar(totals.premium || 0)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>` : ''}
+
+      ${result.ai_totals ? `
+      <div class="est-context-section">
+        <h4 style="font-size:13px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">What Each AI Found</h4>
+        <div class="ai-totals-row">
+          ${Object.entries(result.ai_totals).map(([ai, t]) => t ? `
+            <div class="ai-total-chip ${ai}">
+              <div class="name">${aiLabel(ai)}</div>
+              <div class="amounts">Conservative: ${fmtDollar(t.conservative || 0)}<br>Market: ${fmtDollar(t.market_rate || 0)}<br>Premium: ${fmtDollar(t.premium || 0)}</div>
+            </div>
+          ` : '').join('')}
+        </div>
+      </div>` : ''}
+
+      ${result.market_context ? `
+      <div class="est-context-section">
+        <h4 style="font-size:13px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Market Context</h4>
+        <div class="est-context-box">${esc(result.market_context)}</div>
+      </div>` : ''}
+
+      ${result.search_sources && result.search_sources.length ? `
+      <div class="est-context-section">
+        <div class="est-sources">
+          <strong>Sources searched:</strong>
+          ${result.search_sources.slice(0,8).map(s => `<a href="${esc(s)}" target="_blank" rel="noopener">${esc(s.replace(/^https?:\/\//,'').split('/')[0])}</a>`).join(' · ')}
+        </div>
+      </div>` : ''}
+    </div>
+  `;
+
+  wrap.innerHTML = headerHtml;
+  return wrap;
 }
-document.addEventListener('click', e => {
-  const modal = document.getElementById('usage-modal');
-  if (e.target === modal) closeUsageModal();
-});
 
+async function approveEstimate(estId) {
+  try {
+    await fetch(`/api/estimates/${estId}/approve`, { method: 'PATCH' });
+    const btn = document.getElementById(`approve-btn-${estId}`);
+    if (btn) { btn.textContent = '✓ Approved!'; btn.disabled = true; btn.style.background = '#1e7e34'; }
+    showToast('Estimate approved ✓');
+    loadEstimates();
+  } catch(e) { showToast('Could not approve: ' + e.message); }
+}
 
+// ── Estimates sidebar list ─────────────────────────────────────────────────
+async function loadEstimates() {
+  const panel = document.getElementById('estimates-panel');
+  try {
+    const res = await fetch('/api/estimates');
+    const ests = await res.json();
+    panel.innerHTML = '';
+    if (!ests.length) {
+      panel.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:12px 8px">No saved estimates yet.<br>Fill the form and click Search!</div>';
+      return;
+    }
+    ests.forEach(e => panel.appendChild(makeEstimateItem(e)));
+  } catch(err) {
+    panel.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px">Could not load estimates.</div>';
+  }
+}
+
+function makeEstimateItem(e) {
+  const el = document.createElement('div');
+  el.className = 'est-item' + (e.id === currentEstimateId ? ' active' : '');
+  el.dataset.id = e.id;
+  const approvedBadge = e.status === 'approved' ? '<span class="est-approved">✓ Approved</span>' : '';
+  el.innerHTML = `
+    <div class="est-title">${esc(e.project_type)}${approvedBadge}</div>
+    <div class="est-meta">${esc(e.city)}</div>
+    <div class="est-bid">${fmtDollar(e.recommended_bid || 0)} est.</div>
+  `;
+  el.addEventListener('click', () => loadEstimateDetail(e.id));
+  return el;
+}
+
+async function loadEstimateDetail(estId) {
+  currentEstimateId = estId;
+  document.querySelectorAll('.est-item').forEach(el => el.classList.toggle('active', +el.dataset.id === estId));
+  // Switch to estimator tab
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.querySelector('.nav-tab[data-tab="estimator"]').classList.add('active');
+  document.getElementById('conv-list').style.display = 'none';
+  document.getElementById('trends-panel').classList.remove('visible');
+  document.getElementById('estimates-panel').classList.add('visible');
+  document.getElementById('chat-area').style.display = 'none';
+  document.getElementById('input-wrap').style.display = 'none';
+  document.getElementById('estimator-area').classList.add('visible');
+
+  const resultArea = document.getElementById('est-result-area');
+  resultArea.innerHTML = '<div class="est-progress-card"><p style="color:#888">Loading…</p></div>';
+
+  try {
+    const res = await fetch(`/api/estimates/${estId}`);
+    const data = await res.json();
+    resultArea.innerHTML = '';
+    if (data.result) {
+      data.result.estimate_id = estId;
+      data.result.form_data = { project_type: data.project_type, city: data.city, sqft: data.sqft, quality: data.quality };
+      resultArea.appendChild(renderEstimateResult(data.result));
+    }
+  } catch(e) {
+    resultArea.innerHTML = '<div class="est-progress-card"><p style="color:#D32F2F">Could not load estimate.</p></div>';
+  }
+}
+
+// ── Formatting helpers ─────────────────────────────────────────────────────
+function fmtDollar(n) {
+  if (!n && n !== 0) return '—';
+  return '$' + Math.round(n).toLocaleString('en-US');
+}
+
+// ── Service Worker (PWA install) ──────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/static/sw.js').catch(function(){});
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/static/sw.js').catch(() => {});
   });
-  window.addEventListener('beforeinstallprompt', function(e) {
+  // Capture install prompt so we can trigger it programmatically
+  window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     window._installPrompt = e;
   });
 }
 </script>
-
-  <!-- Usage modal -->
-  <div id="usage-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;">
-    <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;position:relative;">
-      <button onclick="closeUsageModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;">✕</button>
-      <h3 style="margin:0 0 4px;font-size:15px;font-weight:600;">💳 API Usage &amp; Estimated Cost</h3>
-      <p style="margin:0 0 16px;font-size:12px;color:var(--text-muted);">Tracked from this session's API responses. Resets when the database is cleared.</p>
-      <div id="usage-content" style="font-size:13px;">Loading…</div>
-    </div>
-  </div>
 </body>
 </html>
