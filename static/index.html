@@ -18,7 +18,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/mrked.min.js"></script>
 <style>
 /* ── Reset & base ─────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1369,7 +1369,7 @@ function esc(s) {
     .replace(/"/g,'&quot;');
 }
 
-fmunction renderMd(s) {
+function renderMd(s) {
   if (!s) return '';
   try {
     return typeof marked !== 'undefined' ? marked.parse(s) : esc(s);
