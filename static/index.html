@@ -89,7 +89,9 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1a1a2e; 
 }
 .conv-item:hover { background: var(--dark3); color: var(--text); }
 .conv-item.active { background: var(--dark3); color: var(--text); }
-.conv-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conv-item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.conv-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.conv-time { font-size: 10px; color: var(--text-muted); opacity: .7; }
 .conv-delete { opacity: 0; font-size: 16px; cursor: pointer; transition: opacity .15s; flex-shrink: 0; color: var(--text-muted); background: none; border: none; }
 .conv-item:hover .conv-delete { opacity: 1; }
 #sidebar-footer { padding: 12px; border-top: 1px solid var(--border); }
@@ -355,12 +357,16 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1a1a2e; 
 /* ── Stop button ─────────────────────────────────────────────────── */
 #stop-btn {
   width: 42px; height: 42px; flex-shrink: 0;
-  background: #F44336; border: none; border-radius: 10px;
-  cursor: pointer; display: none; align-items: center; justify-content: center;
-  color: white; font-size: 16px; transition: background .15s;
+  background: var(--dark3); border: 1px solid var(--border); border-radius: 10px;
+  cursor: not-allowed; display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); font-size: 16px; transition: all .15s;
+  opacity: 0.4;
 }
-#stop-btn.visible { display: flex; }
-#stop-btn:hover { background: #D32F2F; }
+#stop-btn.visible {
+  background: #F44336; border-color: #F44336;
+  color: white; cursor: pointer; opacity: 1;
+}
+#stop-btn.visible:hover { background: #D32F2F; border-color: #D32F2F; }
 
 /* ── Queue input ─────────────────────────────────────────────────── */
 #queue-wrap {
@@ -818,12 +824,28 @@ async function loadConversations() {
   } catch(e) { console.error('loadConversations', e); }
 }
 
+function fmtConvTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffDays === 0) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return d.toLocaleDateString([], { weekday: 'short' });
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
 function makeConvItem(c) {
   const el = document.createElement('div');
   el.className = 'conv-item' + (c.id === currentConvId ? ' active' : '');
   el.dataset.id = c.id;
+  const timeStr = fmtConvTime(c.updated_at || c.created_at);
   el.innerHTML = `
-    <span class="conv-title">${esc(c.title)}</span>
+    <div class="conv-item-body">
+      <span class="conv-title">${esc(c.title)}</span>
+      ${timeStr ? `<span class="conv-time">${timeStr}</span>` : ''}
+    </div>
     <button class="conv-delete" title="Delete" onclick="deleteConv(event, ${c.id})">🗑</button>
   `;
   el.addEventListener('click', () => openConversation(c.id));
@@ -939,8 +961,10 @@ async function sendMessage() {
       const parts = buffer.split('\n\n');
       buffer = parts.pop();
       for (const part of parts) {
-        if (processSSEChunk(part, thinkingEl)) streamDone = true;
+        if (processSSEChunk(part, thinkingEl)) { streamDone = true; break; }
       }
+      // Break immediately — don't call reader.read() again after result/error received
+      if (streamDone) { reader.cancel().catch(() => {}); break; }
     }
   } catch(e) {
     thinkingEl.remove();
@@ -948,23 +972,28 @@ async function sendMessage() {
       msgEl.appendChild(makeErrorCard('Connection error: ' + e.message));
       scrollToBottom();
     }
-  }
+  } finally {
+    // Always reset — even if an unexpected exception bubbles up
+    isStreaming = false;
+    streamAbort = null;
+    document.getElementById('send-btn').disabled = false;
+    document.getElementById('stop-btn').classList.remove('visible');
+    document.getElementById('queue-wrap').classList.remove('visible');
 
-  isStreaming = false;
-  streamAbort = null;
-  document.getElementById('send-btn').disabled = false;
-  document.getElementById('stop-btn').classList.remove('visible');
-  document.getElementById('queue-wrap').classList.remove('visible');
+    // Refresh sidebar conversation list
+    loadConversations();
+    // Refresh trends panel if it's currently open
+    if (document.getElementById('trends-panel').classList.contains('visible')) loadTrends();
 
-  // Fire queued message
-  const queuedQuestion = pendingQueue;
-  pendingQueue = '';
-  const queueInput = document.getElementById('queue-input');
-  if (queueInput) queueInput.value = '';
-  loadConversations();
-  if (queuedQuestion) {
-    document.getElementById('msg-input').value = queuedQuestion;
-    setTimeout(sendMessage, 300);
+    // Fire queued message
+    const queuedQuestion = pendingQueue;
+    pendingQueue = '';
+    const queueInput = document.getElementById('queue-input');
+    if (queueInput) queueInput.value = '';
+    if (queuedQuestion) {
+      document.getElementById('msg-input').value = queuedQuestion;
+      setTimeout(sendMessage, 300);
+    }
   }
 }
 
