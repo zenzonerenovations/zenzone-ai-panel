@@ -19,10 +19,11 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import (
-    Conversation, Message, AIResponse, FileAttachment, TokenUsage,
+    Conversation, Message, AIResponse, FileAttachment, TokenUsage, Estimate,
     get_db, init_db,
 )
 from debate import run_debate
+from estimate import run_estimate
 from file_handler import process_upload
 
 # ── App setup ─────────────────────────────────────────────────────────────────
@@ -62,6 +63,15 @@ class ChatRequest(BaseModel):
 
 class ConversationRename(BaseModel):
     title: str
+
+
+class EstimateRequest(BaseModel):
+    project_type: str
+    city: str
+    sqft: Optional[str] = ""
+    quality: Optional[str] = "mid-range"
+    scope: Optional[List[str]] = []
+    description: Optional[str] = ""
 
 
 # ── Conversations ─────────────────────────────────────────────────────────────
@@ -131,7 +141,7 @@ async def chat(conv_id: int, body: ChatRequest, db: Session = Depends(get_db)):
 
     # Auto-title the conversation from the first message
     if len(conv.messages) == 0:
-        conv.title = body.question[:80] + ("\u2026" if len(body.question) > 80 else "")
+        conv.title = body.question[:80] + ("…" if len(body.question) > 80 else "")
 
     conv.updated_at = datetime.utcnow()
     db.commit()
@@ -301,7 +311,7 @@ def get_trends(db: Session = Depends(get_db)):
                 "date":    r.created_at.isoformat(),
                 "ai":      r.ai_name,
                 "changed": r.changed_position,
-                "preview": msg.content[:80] + "\u2026" if len(msg.content) > 80 else msg.content,
+                "preview": msg.content[:80] + "…" if len(msg.content) > 80 else msg.content,
                 "conv_id": msg.conversation_id,
             })
 
@@ -315,6 +325,116 @@ def get_trends(db: Session = Depends(get_db)):
         "total_conversations": total_convs,
         "total_questions":     total_msgs,
     }
+
+
+# ── Estimator (SSE streaming) ─────────────────────────────────────────────────
+
+@app.post("/api/estimate")
+async def estimate(body: EstimateRequest, db: Session = Depends(get_db)):
+    """Run a web-search-powered three-AI renovation estimate, stream progress via SSE."""
+
+    form_data = {
+        "project_type": body.project_type,
+        "city":         body.city,
+        "sqft":         body.sqft,
+        "quality":      body.quality,
+        "scope":        body.scope,
+        "description":  body.description,
+    }
+
+    async def event_stream():
+        queue: asyncio.Queue = asyncio.Queue()
+
+        async def on_progress(msg: str):
+            await queue.put(("status", msg))
+
+        task = asyncio.create_task(run_estimate(form_data, on_progress))
+
+        while not task.done():
+            try:
+                kind, data = await asyncio.wait_for(queue.get(), timeout=0.3)
+                yield f"event: {kind}\ndata: {json.dumps({'message': data})}\n\n"
+            except asyncio.TimeoutError:
+                yield "event: ping\ndata: {}\n\n"
+
+        while not queue.empty():
+            kind, data = queue.get_nowait()
+            yield f"event: {kind}\ndata: {json.dumps({'message': data})}\n\n"
+
+        try:
+            result = task.result()
+        except Exception as exc:
+            yield f"event: error\ndata: {json.dumps({'message': str(exc)})}\n\n"
+            return
+
+        # Persist estimate to DB
+        new_db = next(get_db())
+        try:
+            est = Estimate(
+                project_type=body.project_type,
+                city=body.city,
+                sqft=body.sqft,
+                quality=body.quality,
+                scope=json.dumps(body.scope),
+                description=body.description,
+                result_json=json.dumps(result),
+                recommended_bid=result.get("recommended_bid", 0),
+                status="draft",
+            )
+            new_db.add(est)
+            new_db.commit()
+            new_db.refresh(est)
+            result["estimate_id"] = est.id
+        except Exception:
+            pass
+        finally:
+            new_db.close()
+
+        yield f"event: result\ndata: {json.dumps(result)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.get("/api/estimates")
+def list_estimates(db: Session = Depends(get_db)):
+    """Return all saved estimates, newest first."""
+    ests = db.query(Estimate).order_by(Estimate.created_at.desc()).limit(100).all()
+    return [_estimate_summary(e) for e in ests]
+
+
+@app.get("/api/estimates/{est_id}")
+def get_estimate(est_id: int, db: Session = Depends(get_db)):
+    est = db.query(Estimate).filter(Estimate.id == est_id).first()
+    if not est:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+    d = _estimate_summary(est)
+    if est.result_json:
+        d["result"] = json.loads(est.result_json)
+    return d
+
+
+@app.patch("/api/estimates/{est_id}/approve")
+def approve_estimate(est_id: int, db: Session = Depends(get_db)):
+    est = db.query(Estimate).filter(Estimate.id == est_id).first()
+    if not est:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+    est.status = "approved"
+    db.commit()
+    return {"ok": True, "estimate_id": est_id}
+
+
+@app.delete("/api/estimates/{est_id}")
+def delete_estimate(est_id: int, db: Session = Depends(get_db)):
+    est = db.query(Estimate).filter(Estimate.id == est_id).first()
+    if not est:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+    db.delete(est)
+    db.commit()
+    return {"ok": True}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -332,6 +452,19 @@ def _conv_summary(conv: Conversation) -> dict:
         "title":      conv.title,
         "created_at": conv.created_at.isoformat(),
         "updated_at": conv.updated_at.isoformat(),
+    }
+
+
+def _estimate_summary(est: Estimate) -> dict:
+    return {
+        "id":             est.id,
+        "project_type":   est.project_type,
+        "city":           est.city,
+        "sqft":           est.sqft,
+        "quality":        est.quality,
+        "recommended_bid": est.recommended_bid,
+        "status":         est.status,
+        "created_at":     est.created_at.isoformat(),
     }
 
 
