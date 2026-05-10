@@ -2,7 +2,7 @@
 debate.py — Core AI debate orchestration for ZenZone AI Panel
 
 Flow:
-  1. Round 1: Claude, ChatGPT, and Grok each answer independently
+  1. Round 1: Claude (with web search), ChatGPT, and Grok each answer independently
   2. Round 2: Each AI sees the others' answers and refines
   3. Synthesis: Best answer distilled by Claude
   4. Summary: Plain-English meta-analysis of what happened
@@ -14,7 +14,7 @@ from typing import Optional, List, Dict, Any, Callable, Awaitable
 import anthropic
 import openai
 
-# ── Clients ────────────────────────────────────────────────────────────────────────────
+# ── Clients ───────────────────────────────────────────────────────────────────
 
 def _get_anthropic():
     key = os.getenv("ANTHROPIC_API_KEY", "")
@@ -32,8 +32,9 @@ CLAUDE_MODEL  = os.getenv("CLAUDE_MODEL",  "claude-opus-4-6")
 OPENAI_MODEL  = os.getenv("OPENAI_MODEL",  "gpt-4o")
 GROK_MODEL    = os.getenv("GROK_MODEL",    "grok-3")
 
+AI_TIMEOUT = 60  # seconds per call
 
-# ── Message builders ─────────────────────────────────────────────────────────────────────────
+# ── Message builders ──────────────────────────────────────────────────────────
 
 def _build_claude_messages(history: List[Dict], question: str,
                             file_text: Optional[str] = None) -> List[Dict]:
@@ -57,13 +58,12 @@ def _build_oai_messages(system: str, history: List[Dict], question: str,
     return msgs
 
 
-# ── Token pricing (per million tokens) ────────────────────────────────────────────────────────
-# Update these if providers change their pricing
+# ── Token pricing ─────────────────────────────────────────────────────────────
 
 PRICING = {
-    "claude":  {"input": 15.00, "output": 75.00},   # claude-opus-4-6
-    "chatgpt": {"input":  2.50, "output": 10.00},   # gpt-4o
-    "grok":    {"input":  3.00, "output": 15.00},   # grok-3
+    "claude":  {"input": 15.00, "output": 75.00},
+    "chatgpt": {"input":  2.50, "output": 10.00},
+    "grok":    {"input":  3.00, "output": 15.00},
 }
 
 def _calc_cost(ai: str, input_tok: int, output_tok: int) -> float:
@@ -71,20 +71,58 @@ def _calc_cost(ai: str, input_tok: int, output_tok: int) -> float:
     return (input_tok * p["input"] + output_tok * p["output"]) / 1_000_000
 
 
-# ── Individual AI callers — return (text, input_tokens, output_tokens) ────────────
+# ── Individual AI callers ─────────────────────────────────────────────────────
 
-async def _ask_claude(messages: List[Dict]) -> tuple:
+async def _ask_claude(messages: List[Dict], web_search: bool = False) -> tuple:
+    """Claude — optionally with live web search on Round 1."""
+    client = _get_anthropic()
+
+    if web_search:
+        # Try with web search tool
+        try:
+            resp = await asyncio.wait_for(
+                client.messages.create(
+                    model=CLAUDE_MODEL,
+                    max_tokens=2048,
+                    tools=[{
+                        "type": "web_search_20250305",
+                        "name": "web_search",
+                        "max_uses": 3,
+                    }],
+                    messages=messages,
+                ),
+                timeout=AI_TIMEOUT,
+            )
+            # Extract final text block (after any tool-use blocks)
+            text = ""
+            for block in resp.content:
+                if hasattr(block, "text"):
+                    text = block.text
+            if text:
+                usage = resp.usage
+                return (text,
+                        getattr(usage, "input_tokens", 0),
+                        getattr(usage, "output_tokens", 0))
+        except Exception:
+            pass  # fall through to no-search
+
+    # Standard call (no web search, or web search failed)
     try:
-        client = _get_anthropic()
-        resp = await client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=2048,
-            messages=messages,
+        resp = await asyncio.wait_for(
+            client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=2048,
+                messages=messages,
+            ),
+            timeout=AI_TIMEOUT,
         )
         usage = resp.usage
-        return (resp.content[0].text,
+        text = resp.content[0].text if resp.content else ""
+        return (text,
                 getattr(usage, "input_tokens", 0),
                 getattr(usage, "output_tokens", 0))
+    except asyncio.TimeoutError:
+        return ("[Claude timed out]", 0, 0)
     except Exception as e:
         return (f"[Claude unavailable: {e}]", 0, 0)
 
@@ -92,15 +130,20 @@ async def _ask_claude(messages: List[Dict]) -> tuple:
 async def _ask_chatgpt(messages: List[Dict]) -> tuple:
     try:
         client = _get_openai()
-        resp = await client.chat.completions.create(
-            model=OPENAI_MODEL,
-            max_tokens=2048,
-            messages=messages,
+        resp = await asyncio.wait_for(
+            client.chat.completions.create(
+                model=OPENAI_MODEL,
+                max_tokens=2048,
+                messages=messages,
+            ),
+            timeout=AI_TIMEOUT,
         )
         usage = resp.usage
         return (resp.choices[0].message.content,
                 getattr(usage, "prompt_tokens", 0),
                 getattr(usage, "completion_tokens", 0))
+    except asyncio.TimeoutError:
+        return ("[ChatGPT timed out]", 0, 0)
     except Exception as e:
         return (f"[ChatGPT unavailable: {e}]", 0, 0)
 
@@ -108,20 +151,25 @@ async def _ask_chatgpt(messages: List[Dict]) -> tuple:
 async def _ask_grok(messages: List[Dict]) -> tuple:
     try:
         client = _get_grok()
-        resp = await client.chat.completions.create(
-            model=GROK_MODEL,
-            max_tokens=2048,
-            messages=messages,
+        resp = await asyncio.wait_for(
+            client.chat.completions.create(
+                model=GROK_MODEL,
+                max_tokens=2048,
+                messages=messages,
+            ),
+            timeout=AI_TIMEOUT,
         )
         usage = resp.usage
         return (resp.choices[0].message.content,
                 getattr(usage, "prompt_tokens", 0),
                 getattr(usage, "completion_tokens", 0))
+    except asyncio.TimeoutError:
+        return ("[Grok timed out]", 0, 0)
     except Exception as e:
         return (f"[Grok unavailable: {e}]", 0, 0)
 
 
-# ── Debate logic ────────────────────────────────────────────────────────────────────────────────
+# ── Debate logic ──────────────────────────────────────────────────────────────
 
 SYSTEM_PROMPT = ("You are a helpful, honest, and thorough AI assistant. "
                  "Give clear, well-reasoned, comprehensive answers.")
@@ -178,17 +226,18 @@ async def run_debate(
         tok[ai]["input"]  += inp
         tok[ai]["output"] += out
 
-    await emit("Consulting Claude, ChatGPT, and Grok simultaneously\u2026")
+    await emit("Consulting Claude, ChatGPT, and Grok simultaneously…")
 
+    # Round 1 — Claude uses web search to pull current info
     (claude_r1,  ci1, co1), (chatgpt_r1, gi1, go1), (grok_r1, xri1, xro1) = \
         await asyncio.gather(
-            _ask_claude( _build_claude_messages(history, question, file_text)),
+            _ask_claude(_build_claude_messages(history, question, file_text), web_search=True),
             _ask_chatgpt(_build_oai_messages(SYSTEM_PROMPT, history, question, file_text)),
             _ask_grok(   _build_oai_messages(SYSTEM_PROMPT, history, question, file_text)),
         )
     _add("claude", ci1, co1); _add("chatgpt", gi1, go1); _add("grok", xri1, xro1)
 
-    await emit("Round 2: each AI is reviewing the others' answers\u2026")
+    await emit("Round 2: each AI is reviewing the others' answers…")
 
     claude_r2_msgs  = _build_claude_messages([], _debate_prompt_claude(
         question, claude_r1, "ChatGPT", chatgpt_r1, "Grok", grok_r1))
@@ -205,7 +254,7 @@ async def run_debate(
         )
     _add("claude", ci2, co2); _add("chatgpt", gi2, go2); _add("grok", xri2, xro2)
 
-    await emit("Synthesizing the best possible answer\u2026")
+    await emit("Synthesizing the best possible answer…")
 
     synthesis_q = (
         f'Synthesize these three AI final answers into one authoritative, clear response.\n\n'
@@ -214,39 +263,39 @@ async def run_debate(
         f"ChatGPT's final answer:\n{chatgpt_r2}\n\n"
         f"Grok's final answer:\n{grok_r2}\n\n"
         "Take the strongest, most accurate points from each. Resolve contradictions using your best "
-        "judgment. Do NOT mention AIs or debate in your answer \u2014 just provide the best possible "
+        "judgment. Do NOT mention AIs or debate in your answer — just provide the best possible "
         "response to the original question as if it were your own answer."
     )
     synthesis, si, so = await _ask_claude(_build_claude_messages([], synthesis_q))
     _add("claude", si, so)
 
-    await emit("Generating debate insights\u2026")
+    await emit("Generating debate insights…")
 
     def _snip(s: str, n: int = 400) -> str:
-        return s[:n] + "\u2026" if len(s) > n else s
+        return s[:n] + "…" if len(s) > n else s
 
     summary_q = (
         f'Analyze this multi-AI debate and write 3-5 sentences for the user.\n\n'
         f'Question: "{question}"\n\n'
         f"Round 1 answers:\n"
-        f"\u2022 Claude: {_snip(claude_r1)}\n"
-        f"\u2022 ChatGPT: {_snip(chatgpt_r1)}\n"
-        f"\u2022 Grok: {_snip(grok_r1)}\n\n"
+        f"• Claude: {_snip(claude_r1)}\n"
+        f"• ChatGPT: {_snip(chatgpt_r1)}\n"
+        f"• Grok: {_snip(grok_r1)}\n\n"
         f"Round 2 answers:\n"
-        f"\u2022 Claude: {_snip(claude_r2)}\n"
-        f"\u2022 ChatGPT: {_snip(chatgpt_r2)}\n"
-        f"\u2022 Grok: {_snip(grok_r2)}\n\n"
+        f"• Claude: {_snip(claude_r2)}\n"
+        f"• ChatGPT: {_snip(chatgpt_r2)}\n"
+        f"• Grok: {_snip(grok_r2)}\n\n"
         "Write a specific, insightful summary: where did they agree, where did they disagree, "
         "which ones changed position and why, any notable patterns. "
-        "Be concrete \u2014 name which AI said what. Address the user directly (second person)."
+        "Be concrete — name which AI said what. Address the user directly (second person)."
     )
     summary, smi, smo = await _ask_claude(_build_claude_messages([], summary_q))
     _add("claude", smi, smo)
 
     changes = {
-        "claude":   _detect_change(claude_r1,  claude_r2),
-        "chatgpt":  _detect_change(chatgpt_r1, chatgpt_r2),
-        "grok":     _detect_change(grok_r1,    grok_r2),
+        "claude":  _detect_change(claude_r1,  claude_r2),
+        "chatgpt": _detect_change(chatgpt_r1, chatgpt_r2),
+        "grok":    _detect_change(grok_r1,    grok_r2),
     }
 
     token_usage = {}
