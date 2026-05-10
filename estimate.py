@@ -16,7 +16,7 @@ CLAUDE_MODEL  = os.getenv("CLAUDE_MODEL", "claude-opus-4-6")
 OPENAI_MODEL  = os.getenv("OPENAI_MODEL", "gpt-4o")
 GROK_MODEL    = os.getenv("GROK_MODEL",   "grok-3")
 
-AI_TIMEOUT = 90  # seconds — hard cap per AI call
+AI_TIMEOUT = 30  # seconds — inactivity / total timeout
 
 # ── Token pricing ─────────────────────────────────────────────────────────────
 PRICING = {
@@ -171,7 +171,7 @@ async def _ask_claude(prompt: str) -> tuple:
                 max_tokens=4096,
                 messages=[{"role": "user", "content": prompt}],
             ),
-            timeout=60,
+            timeout=AI_TIMEOUT,
         )
         usage = resp.usage
         return (resp.content[0].text,
@@ -227,7 +227,7 @@ async def _ask_chatgpt(prompt: str) -> tuple:
                     {"role": "user", "content": prompt},
                 ],
             ),
-            timeout=60,
+            timeout=AI_TIMEOUT,
         )
         usage = resp.usage
         return (
