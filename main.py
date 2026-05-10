@@ -51,6 +51,11 @@ async def startup():
 async def root():
     return FileResponse("static/index.html")
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 
 # ── Pydantic schemas ──────────────────────────────────────────────────────────
 
