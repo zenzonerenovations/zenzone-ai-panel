@@ -11,12 +11,14 @@ from typing import Optional, Dict, Any, Callable, Awaitable, List
 import anthropic
 import openai
 
-# ── Models ──────────────────────────────────────────────────────────────────
-CLAUDE_MODEL        = os.getenv("CLAUDE_MODEL", "claude-opus-4-6")
-OPENAI_SEARCH_MODEL = "gpt-4o-search-preview"   # built-in live web search
-GROK_MODEL          = os.getenv("GROK_MODEL",   "grok-3")
+# ── Models ────────────────────────────────────────────────────────────────────
+CLAUDE_MODEL  = os.getenv("CLAUDE_MODEL", "claude-opus-4-6")
+OPENAI_MODEL  = os.getenv("OPENAI_MODEL", "gpt-4o")
+GROK_MODEL    = os.getenv("GROK_MODEL",   "grok-3")
 
-# ── Token pricing ────────────────────────────────────────────────────────────
+AI_TIMEOUT = 90  # seconds — hard cap per AI call
+
+# ── Token pricing ─────────────────────────────────────────────────────────────
 PRICING = {
     "claude":  {"input": 15.00, "output": 75.00},
     "chatgpt": {"input":  2.50, "output": 10.00},
@@ -40,7 +42,7 @@ def _get_grok():
         base_url="https://api.x.ai/v1",
     )
 
-# ── Standard renovation line-item categories ─────────────────────────────────
+# ── Standard renovation line-item categories ──────────────────────────────────
 CATEGORIES = [
     "Demolition & Disposal",
     "Rough Plumbing",
@@ -62,7 +64,7 @@ CATEGORIES = [
     "Cleanup & Waste Removal",
 ]
 
-# ── Prompt builder ────────────────────────────────────────────────────────────
+# ── Prompt builder ─────────────────────────────────────────────────────────────
 def _build_prompt(form: Dict) -> str:
     project_type = form.get("project_type", "renovation")
     city         = form.get("city", "")
@@ -112,18 +114,15 @@ Rules:
 - project_total must equal the sum of all applicable line items.
 """
 
-# ── JSON extractor ────────────────────────────────────────────────────────────
+# ── JSON extractor ─────────────────────────────────────────────────────────────
 def _extract_json(text: str) -> Optional[Dict]:
     if not text:
         return None
-    # Strip markdown code fences
     text = re.sub(r"```(?:json)?", "", text).strip()
-    # Try direct parse
     try:
         return json.loads(text)
     except Exception:
         pass
-    # Try largest {...} block
     try:
         m = re.search(r"\{[\s\S]*\}", text)
         if m:
@@ -133,45 +132,102 @@ def _extract_json(text: str) -> Optional[Dict]:
     return None
 
 # ── Individual AI callers ─────────────────────────────────────────────────────
+
 async def _ask_claude(prompt: str) -> tuple:
-    """Claude with Anthropic's native web_search_20250305 tool."""
+    """Claude with Anthropic native web_search tool. Falls back to no-search on error."""
+    client = _get_anthropic()
+
+    # Try with web search first
     try:
-        client = _get_anthropic()
-        resp = await client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=4096,
-            tools=[{
-                "type": "web_search_20250305",
-                "name": "web_search",
-                "max_uses": 5,
-            }],
-            messages=[{"role": "user", "content": prompt}],
+        resp = await asyncio.wait_for(
+            client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=4096,
+                tools=[{
+                    "type": "web_search_20250305",
+                    "name": "web_search",
+                    "max_uses": 5,
+                }],
+                messages=[{"role": "user", "content": prompt}],
+            ),
+            timeout=AI_TIMEOUT,
         )
-        # Grab the final text block (after any tool-use blocks)
         text = ""
         for block in resp.content:
             if hasattr(block, "text"):
                 text = block.text
         usage = resp.usage
         return (text, getattr(usage, "input_tokens", 0), getattr(usage, "output_tokens", 0))
+    except asyncio.TimeoutError:
+        pass  # fall through to no-search attempt
+    except Exception:
+        pass  # web search not available — fall through
+
+    # Fallback: Claude without web search
+    try:
+        resp = await asyncio.wait_for(
+            client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=4096,
+                messages=[{"role": "user", "content": prompt}],
+            ),
+            timeout=60,
+        )
+        usage = resp.usage
+        return (resp.content[0].text,
+                getattr(usage, "input_tokens", 0),
+                getattr(usage, "output_tokens", 0))
+    except asyncio.TimeoutError:
+        return ("[Claude timed out]", 0, 0)
     except Exception as e:
         return (f"[Claude error: {e}]", 0, 0)
 
 
 async def _ask_chatgpt(prompt: str) -> tuple:
-    """ChatGPT via gpt-4o-search-preview — live web search built in."""
+    """ChatGPT with web search via Responses API; falls back to Chat Completions."""
+    client = _get_openai()
+
+    # Try Responses API with web_search_preview
     try:
-        client = _get_openai()
-        resp = await client.chat.completions.create(
-            model=OPENAI_SEARCH_MODEL,
-            max_tokens=4096,
-            messages=[
-                {"role": "system",
-                 "content": "You are a professional renovation cost estimator. "
-                             "Always search the live web before providing any numbers. "
-                             "Return only valid JSON as instructed."},
-                {"role": "user", "content": prompt},
-            ],
+        resp = await asyncio.wait_for(
+            client.responses.create(
+                model=OPENAI_MODEL,
+                tools=[{"type": "web_search_preview"}],
+                input=prompt,
+            ),
+            timeout=AI_TIMEOUT,
+        )
+        text = ""
+        for item in resp.output:
+            if getattr(item, "type", "") == "message":
+                for c in getattr(item, "content", []):
+                    if getattr(c, "type", "") == "output_text":
+                        text += getattr(c, "text", "")
+        usage = getattr(resp, "usage", None)
+        inp = getattr(usage, "input_tokens", 0) if usage else 0
+        out = getattr(usage, "output_tokens", 0) if usage else 0
+        if text:
+            return (text, inp, out)
+    except asyncio.TimeoutError:
+        pass
+    except Exception:
+        pass
+
+    # Fallback: Chat Completions (no live web but won't hang)
+    try:
+        resp = await asyncio.wait_for(
+            client.chat.completions.create(
+                model=OPENAI_MODEL,
+                max_tokens=4096,
+                messages=[
+                    {"role": "system",
+                     "content": "You are a professional renovation cost estimator. "
+                                "Use your knowledge of contractor pricing to provide detailed estimates. "
+                                "Return only valid JSON as instructed."},
+                    {"role": "user", "content": prompt},
+                ],
+            ),
+            timeout=60,
         )
         usage = resp.usage
         return (
@@ -179,25 +235,29 @@ async def _ask_chatgpt(prompt: str) -> tuple:
             getattr(usage, "prompt_tokens", 0),
             getattr(usage, "completion_tokens", 0),
         )
+    except asyncio.TimeoutError:
+        return ("[ChatGPT timed out]", 0, 0)
     except Exception as e:
         return (f"[ChatGPT error: {e}]", 0, 0)
 
 
 async def _ask_grok(prompt: str) -> tuple:
-    """Grok with real-time X/web knowledge."""
+    """Grok with real-time knowledge."""
     try:
         client = _get_grok()
-        resp = await client.chat.completions.create(
-            model=GROK_MODEL,
-            max_tokens=4096,
-            messages=[
-                {"role": "system",
-                 "content": "You are a professional renovation cost estimator with access to "
-                             "real-time pricing data via the web and X/Twitter. "
-                             "Search for current contractor rates before answering. "
-                             "Return only valid JSON as instructed."},
-                {"role": "user", "content": prompt},
-            ],
+        resp = await asyncio.wait_for(
+            client.chat.completions.create(
+                model=GROK_MODEL,
+                max_tokens=4096,
+                messages=[
+                    {"role": "system",
+                     "content": "You are a professional renovation cost estimator with "
+                                "real-time knowledge of current contractor rates and material costs. "
+                                "Return only valid JSON as instructed."},
+                    {"role": "user", "content": prompt},
+                ],
+            ),
+            timeout=AI_TIMEOUT,
         )
         usage = resp.usage
         return (
@@ -205,6 +265,8 @@ async def _ask_grok(prompt: str) -> tuple:
             getattr(usage, "prompt_tokens", 0),
             getattr(usage, "completion_tokens", 0),
         )
+    except asyncio.TimeoutError:
+        return ("[Grok timed out]", 0, 0)
     except Exception as e:
         return (f"[Grok error: {e}]", 0, 0)
 
@@ -219,7 +281,6 @@ def _synthesize(
     if not valid:
         return {"error": "No valid estimates received from any AI."}
 
-    # Average each category across valid estimates
     synth_items = []
     for cat in CATEGORIES:
         vals: Dict[str, List[float]] = {"conservative": [], "market_rate": [], "premium": []}
@@ -249,8 +310,8 @@ def _synthesize(
         "premium":      sum(i["premium"]       for i in synth_items),
     }
 
-    # Recommended bid = average of market_rate recommendations
-    recs = [e.get("recommended_bid", 0) for e in valid if isinstance(e.get("recommended_bid"), (int, float)) and e.get("recommended_bid", 0) > 0]
+    recs = [e.get("recommended_bid", 0) for e in valid
+            if isinstance(e.get("recommended_bid"), (int, float)) and e.get("recommended_bid", 0) > 0]
     recommended = round(sum(recs) / len(recs)) if recs else totals["market_rate"]
 
     contexts = [e.get("market_context", "") for e in valid if e.get("market_context")]
@@ -260,19 +321,18 @@ def _synthesize(
 
     ai_names = ["claude", "chatgpt", "grok"]
     ai_ests  = [claude_est, chatgpt_est, grok_est]
-    ai_totals = {
-        name: est.get("project_total")
-        for name, est in zip(ai_names, ai_ests)
-        if est and "project_total" in est
-    }
 
     return {
-        "line_items":       synth_items,
-        "project_total":    totals,
-        "recommended_bid":  recommended,
-        "market_context":   " ".join(c for c in contexts if c),
-        "search_sources":   list(dict.fromkeys(sources))[:12],
-        "ai_totals":        ai_totals,
+        "line_items":      synth_items,
+        "project_total":   totals,
+        "recommended_bid": recommended,
+        "market_context":  " ".join(c for c in contexts if c),
+        "search_sources":  list(dict.fromkeys(sources))[:12],
+        "ai_totals": {
+            name: est.get("project_total")
+            for name, est in zip(ai_names, ai_ests)
+            if est and "project_total" in est
+        },
         "ai_rationale": {
             name: est.get("recommended_bid_rationale", "")
             for name, est in zip(ai_names, ai_ests)
@@ -317,7 +377,7 @@ async def run_estimate(
     await emit("Parsing estimates from all three AIs…")
 
     def _safe_parse(txt, ai_name):
-        if txt.startswith(f"[{ai_name}"):
+        if not txt or txt.startswith(f"[{ai_name}"):
             return None
         return _extract_json(txt)
 
@@ -329,7 +389,6 @@ async def run_estimate(
 
     result = _synthesize(claude_est, chatgpt_est, grok_est)
 
-    # Token usage
     result["token_usage"] = {
         ai: {
             "input_tokens":  counts["input"],
