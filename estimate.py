@@ -16,7 +16,7 @@ CLAUDE_MODEL  = os.getenv("CLAUDE_MODEL", "claude-opus-4-6")
 OPENAI_MODEL  = os.getenv("OPENAI_MODEL", "gpt-4o")
 GROK_MODEL    = os.getenv("GROK_MODEL",   "grok-3")
 
-AI_TIMEOUT = 30  # seconds — inactivity / total timeout
+AI_TIMEOUT = 60  # seconds — inactivity / total timeout
 
 # ── Token pricing ─────────────────────────────────────────────────────────────
 PRICING = {
